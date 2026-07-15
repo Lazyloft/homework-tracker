@@ -6,135 +6,69 @@
 <title>Homework Tracker</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-
 <style>
-  :root{
-    --ink:#1f2a24;
-    --paper:#faf7f0;
-    --line:#d9d2c2;
-    --done:#3d7a5c;
-    --done-bg:#e3f0e8;
-    --missing:#b85c3a;
-    --missing-bg:#fbe7df;
-    --pending:#8a8170;
-    --pending-bg:#eee9dd;
-    --perfect:#3563a8;
-    --perfect-bg:#e3eaf6;
-    --accent:#c9622f;
-  }
-  *{box-sizing:border-box;}
-  body{
-    margin:0;
-    background:var(--paper);
-    color:var(--ink);
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-    -webkit-tap-highlight-color:transparent;
-  }
-  .app{max-width:100%;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;padding-bottom:24px;}
-  header{padding:16px 16px 12px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--paper);z-index:20;}
-  .eyebrow{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:4px;}
-  h1{font-size:20px;margin:0 0 10px;font-weight:800;letter-spacing:-0.01em;}
-  .class-row{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;}
-  .class-chip{flex:0 0 auto;padding:7px 14px;border-radius:20px;border:1px solid var(--line);background:white;font-size:13px;font-weight:600;color:var(--pending);white-space:nowrap;cursor:pointer;}
-  .class-chip.active{background:var(--accent);color:white;border-color:var(--accent);}
-  .add-class{display:flex;gap:6px;margin-top:8px;}
-  .add-class input{flex:1;font-size:13px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;}
-  .add-class button{background:var(--accent);color:white;font-weight:700;border-radius:8px;padding:7px 12px;font-size:13px;}
-
-  section{padding:14px 16px;}
-  .panel{background:white;border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:14px;}
-  .panel h2{margin:0 0 10px;font-size:14px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--ink);}
-  .row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;}
-  input[type=text],input[type=date],select{
-    font-size:14px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:white;color:var(--ink);
-  }
-  button{border:none;cursor:pointer;font-family:inherit;font-weight:700;border-radius:8px;font-size:13px;padding:8px 12px;}
-  .btn-main{background:var(--accent);color:white;}
-  .btn-ghost{background:var(--pending-bg);color:var(--ink);}
-  .btn-row{display:flex;gap:8px;flex-wrap:wrap;}
-
-  table{border-collapse:collapse;width:100%;font-size:13px;}
-  th,td{border:1px solid var(--line);padding:6px 8px;text-align:left;white-space:nowrap;}
-  th{background:#f1ede1;position:sticky;top:0;}
-  .table-scroll{overflow-x:auto;border-radius:10px;border:1px solid var(--line);}
-  .hw-head{display:flex;flex-direction:column;gap:4px;min-width:140px;}
-  .hw-name{font-weight:800;}
-  .hw-date{font-size:11px;color:var(--pending);font-weight:500;}
-  .hw-actions{display:flex;gap:4px;margin-top:4px;}
-  .hw-actions select{font-size:11px;padding:4px;}
-  .hw-actions button{font-size:11px;padding:4px 6px;}
-
-  .status-cell select{
-    font-size:12px;padding:4px 6px;border-radius:6px;border:1px solid var(--line);width:100%;
-  }
-  .status-submitted{background:var(--perfect-bg);color:var(--perfect);}
-  .status-perfect{background:var(--done-bg);color:var(--done);}
-  .status-completed{background:var(--done-bg);color:var(--done);}
-  .status-empty{background:white;color:var(--pending);}
-
-  .empty-state{text-align:center;color:var(--pending);font-size:13px;padding:30px 10px;}
-
-  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:50;padding:16px;}
-  .modal-overlay.show{display:flex;}
-  .modal{background:white;border-radius:14px;padding:18px;max-width:420px;width:100%;max-height:85vh;overflow-y:auto;}
-  .modal h3{margin:0 0 10px;font-size:16px;}
-  .modal p{font-size:13px;color:var(--pending);margin:0 0 10px;}
-  .match-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);}
-  .match-row label{flex:1;font-size:13px;}
-  .modal .btn-row{margin-top:14px;justify-content:flex-end;}
-  footer{margin-top:auto;text-align:center;font-size:11px;color:var(--pending);padding:18px 20px 4px;}
-  .scan-progress{font-size:12px;color:var(--accent);margin-top:6px;}
-
-  .pill-grid{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0;}
-  .pill{
-    position:relative;
-    border:1px solid var(--line);
-    border-radius:999px;
-    padding:9px 16px;
-    font-size:13px;
-    font-weight:700;
-    cursor:pointer;
-    min-width:90px;
-    text-align:center;
-  }
-  .pill.pill-empty{background:white;color:var(--ink);}
-  .pill.pill-submitted{background:var(--perfect);color:white;border-color:var(--perfect);}
-  .pill.pill-perfect{background:var(--done);color:white;border-color:var(--done);}
-  .pill.pill-completed{background:var(--done);color:white;border-color:var(--done);}
-  .pill-dropdown{
-    position:absolute;
-    top:105%;
-    left:0;
-    background:white;
-    border:1px solid var(--line);
-    border-radius:10px;
-    box-shadow:0 4px 14px rgba(0,0,0,.15);
-    z-index:60;
-    overflow:hidden;
-    min-width:170px;
-  }
-  .pill-dropdown button{
-    display:block;
-    width:100%;
-    text-align:left;
-    background:white;
-    color:var(--ink);
-    border-radius:0;
-    font-weight:600;
-    font-size:13px;
-    padding:9px 12px;
-  }
-  .pill-dropdown button:hover{background:var(--pending-bg);}
-  .expiry-banner{
-    background:var(--missing-bg);
-    color:var(--missing);
-    font-size:12px;
-    font-weight:700;
-    padding:8px 10px;
-    border-radius:8px;
-    margin-bottom:8px;
-    cursor:pointer;
-  }
+:root{
+  --ink:#1f2a24;--paper:#faf7f0;--line:#d9d2c2;--accent:#c9622f;
+  --pending:#8a8170;--pending-bg:#eee9dd;--done:#3d7a5c;--done-bg:#e3f0e8;
+  --perfect:#3563a8;--perfect-bg:#e3eaf6;--missing:#b85c3a;--missing-bg:#fbe7df;
+  /* pill/cell colours */
+  --sub-color:#c94f7a;--sub-bg:#ffd6e4;       /* submitted = pink */
+  --comp-color:#2a6e8a;--comp-bg:#cce8f4;      /* completed = light blue */
+  --perf-color:#2e7d50;--perf-bg:#c8f0d8;      /* perfect = green */
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-tap-highlight-color:transparent;}
+.app{max-width:100%;min-height:100vh;display:flex;flex-direction:column;padding-bottom:24px;}
+header{padding:16px 16px 12px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--paper);z-index:20;}
+.eyebrow{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:4px;}
+h1{font-size:20px;margin:0 0 10px;font-weight:800;}
+.class-row{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;}
+.class-chip{flex:0 0 auto;padding:7px 14px;border-radius:20px;border:1px solid var(--line);background:white;font-size:13px;font-weight:600;color:var(--pending);cursor:pointer;}
+.class-chip.active{background:var(--accent);color:white;border-color:var(--accent);}
+.add-class{display:flex;gap:6px;margin-top:8px;}
+.add-class input{flex:1;font-size:13px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;}
+.add-class button{background:var(--accent);color:white;font-weight:700;border-radius:8px;padding:7px 12px;font-size:13px;border:none;cursor:pointer;}
+section{padding:14px 16px;}
+.panel{background:white;border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:14px;}
+.panel h2{margin:0 0 10px;font-size:14px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;}
+.row-f{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;}
+input[type=text],input[type=date],select{font-size:14px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:white;color:var(--ink);}
+button{border:none;cursor:pointer;font-family:inherit;font-weight:700;border-radius:8px;font-size:13px;padding:8px 12px;}
+.btn-main{background:var(--accent);color:white;}
+.btn-ghost{background:var(--pending-bg);color:var(--ink);}
+.btn-active{background:var(--perfect);color:white;}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;}
+/* TABLE */
+.table-scroll{overflow-x:auto;border-radius:10px;border:1px solid var(--line);}
+table{border-collapse:collapse;width:100%;font-size:12px;}
+th,td{border:1px solid var(--line);padding:5px 7px;text-align:center;white-space:nowrap;}
+th{background:#f1ede1;font-size:11px;}
+th.hw-hd{background:#e3ddd0;font-size:12px;}
+th.clickable{cursor:pointer;color:var(--accent);}
+td:first-child{text-align:left;min-width:110px;}
+td.st-submitted{background:var(--sub-bg);color:var(--sub-color);font-weight:700;}
+td.st-perfect{background:var(--perf-bg);color:var(--perf-color);font-weight:700;}
+td.st-completed{background:var(--comp-bg);color:var(--comp-color);font-weight:700;}
+td.st-empty{background:white;}
+.del-btn{background:none;color:var(--pending);font-size:13px;padding:1px 4px;border-radius:4px;border:none;cursor:pointer;}
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:50;padding:12px;}
+.modal-overlay.show{display:flex;}
+.modal{background:white;border-radius:14px;padding:16px;max-width:460px;width:100%;max-height:90vh;overflow-y:auto;}
+.modal h3{margin:0 0 8px;font-size:16px;}
+.modal p{font-size:13px;color:var(--pending);margin:0 0 10px;}
+/* PILLS */
+.pill-grid{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0;}
+.pill{position:relative;border:2px solid var(--line);border-radius:999px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;min-width:90px;text-align:center;}
+.pill.pill-empty{background:white;color:var(--ink);border-color:var(--line);}
+.pill.pill-submitted{background:var(--sub-bg);color:var(--sub-color);border-color:var(--sub-color);}
+.pill.pill-perfect{background:var(--perf-bg);color:var(--perf-color);border-color:var(--perf-color);}
+.pill.pill-completed{background:var(--comp-bg);color:var(--comp-color);border-color:var(--comp-color);}
+.pill-dropdown{position:absolute;top:105%;left:0;background:white;border:1px solid var(--line);border-radius:10px;box-shadow:0 4px 14px rgba(0,0,0,.15);z-index:60;overflow:hidden;min-width:180px;}
+.pill-dropdown button{display:block;width:100%;text-align:left;background:white;color:var(--ink);border-radius:0;font-weight:600;font-size:13px;padding:9px 12px;border:none;cursor:pointer;}
+.pill-dropdown button:hover{background:var(--pending-bg);}
+footer{margin-top:auto;text-align:center;font-size:11px;color:var(--pending);padding:18px;}
+.empty-state{text-align:center;color:var(--pending);font-size:13px;padding:30px 10px;}
 </style>
 </head>
 <body>
@@ -142,675 +76,482 @@
   <header>
     <div class="eyebrow">Homework Tracker</div>
     <h1>Class spreadsheets</h1>
-    <div class="btn-row" style="margin-bottom:8px;">
+    <div class="btn-row">
       <button class="btn-ghost" id="syncStatusBtn" onclick="showSyncPanel()">☁️ Sync: Off</button>
-      <button class="btn-ghost" id="deleteClassBtn" onclick="deleteActiveClass()" style="display:none;">🗑 Delete class</button>
+      <button class="btn-ghost" id="deleteClassBtn" style="display:none" onclick="deleteActiveClass()">🗑 Delete class</button>
     </div>
-    <div id="syncExpiryBanner"></div>
     <div class="class-row" id="classRow"></div>
     <div class="add-class">
       <input type="text" id="newClassName" placeholder="New class name (e.g. P5 Science)">
-      <button class="btn-main" id="addClassBtn">Add class</button>
+      <button id="addClassBtn">Add class</button>
     </div>
   </header>
-
   <section id="content"></section>
-
-  <footer>Data is saved on this device's browser automatically. Use Export to back it up or print it.</footer>
+  <footer>Data saved automatically · Synced via GitHub Gist when connected</footer>
 </div>
-
-<div class="modal-overlay" id="modalOverlay">
-  <div class="modal" id="modalBody"></div>
-</div>
-
-
-
+<div class="modal-overlay" id="modalOverlay"><div class="modal" id="modalBody"></div></div>
 <script>
-const STORAGE_KEY = 'homeworkTrackerData_v1';
-const SYNC_CONFIG_KEY = 'homeworkTrackerSyncConfig_v1';
-let state = loadState();
-let activeClassId = state.classOrder[0] || null;
-let pendingScan = null; // {homeworkId, status}
+// ── STATE ─────────────────────────────────────────────────────────────────────
+const STORAGE_KEY='homeworkTrackerData_v1';
+const SYNC_CFG_KEY='hwTrackerSyncCfg_v1';
+let state=loadState();
+let activeClassId=state.classOrder[0]||null;
 
 function loadState(){
-  try{
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if(raw) return JSON.parse(raw);
-  }catch(e){}
-  return { classOrder: [], classes: {} };
+  try{const r=localStorage.getItem(STORAGE_KEY);if(r){const p=JSON.parse(r);if(p&&p.classOrder)return p;}}catch(e){}
+  return{classOrder:[],classes:{}};
 }
-
+let saveTimer=null;
 function saveState(){
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  if(syncToken && syncGistId){
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(pushToCloud, 600);
-  }
+  localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
+  if(syncToken&&syncGistId){clearTimeout(saveTimer);saveTimer=setTimeout(pushToCloud,800);}
 }
-function uid(prefix){ return prefix + '_' + Math.random().toString(36).slice(2,9); }
+function uid(p){return(p||'x')+'_'+Math.random().toString(36).slice(2,9);}
 
-// ── CLOUD SYNC (GitHub Gist) ──────────────────────────────────────────────────
-let syncToken = '';
-let syncGistId = '';
-let pollHandle = null;
-let applyingRemote = false;
-let lastRemoteJson = null;
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function esc(s){return String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+function escX(s){return String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[m]));}
+function showModal(html){document.getElementById('modalBody').innerHTML=html;document.getElementById('modalOverlay').classList.add('show');}
+function closeModal(){document.getElementById('modalOverlay').classList.remove('show');}
 
-function loadSyncConfig(){
-  try{ const r=localStorage.getItem('homeworkTrackerData_v1_sync'); if(r) return JSON.parse(r); }catch(e){}
-  return null;
-}
-function saveSyncConfig(c){ localStorage.setItem('homeworkTrackerData_v1_sync', JSON.stringify(c)); }
+// ── SYNC (GitHub Gist) ────────────────────────────────────────────────────────
+let syncToken='',syncGistId='',pollHandle=null,applyingRemote=false,lastRemoteJson=null;
 
-function initSyncFromSavedConfig(){
-  const c=loadSyncConfig();
-  if(c && c.token && c.gistId) connectSync(c.token, c.gistId, true);
-}
+function loadSyncCfg(){try{const r=localStorage.getItem(SYNC_CFG_KEY);if(r)return JSON.parse(r);}catch(e){}return null;}
+function saveSyncCfg(c){localStorage.setItem(SYNC_CFG_KEY,JSON.stringify(c));}
+function initSync(){const c=loadSyncCfg();if(c&&c.token&&c.gistId)connectSync(c.token,c.gistId,true);}
 
-async function connectSync(token, gistId, silent){
-  syncToken = token.trim();
-  gistId = (gistId||'').trim();
+async function connectSync(token,gistId,silent){
+  syncToken=token.trim();gistId=(gistId||'').trim();
   try{
     if(!gistId){
-      // Create a new public gist
-      const res = await fetch('https://api.github.com/gists', {
-        method: 'POST',
-        headers: {'Authorization':'token '+syncToken,'Content-Type':'application/json','Accept':'application/vnd.github+json'},
-        body: JSON.stringify({
-          description: 'homeworkTracker data',
-          public: false,
-          files: { 'homeworkTracker.json': { content: JSON.stringify({state: JSON.stringify(state), updatedAt: Date.now()}) } }
-        })
-      });
-      if(!res.ok){ const e=await res.json(); throw new Error(e.message||'Could not create gist (status '+res.status+')'); }
-      const data = await res.json();
-      gistId = data.id;
-      alert('Sync database created!\n\nGist ID: '+gistId+'\n\nPaste this exact Gist ID on your other device to link them — write it down now.');
+      const res=await fetch('https://api.github.com/gists',{method:'POST',
+        headers:{'Authorization':'token '+syncToken,'Content-Type':'application/json','Accept':'application/vnd.github+json'},
+        body:JSON.stringify({description:'Homework Tracker data',public:false,
+          files:{'homeworkTracker.json':{content:JSON.stringify({json:JSON.stringify(state),updatedAt:Date.now()})}}})});
+      if(!res.ok){const e=await res.json();throw new Error(e.message||'Status '+res.status);}
+      const d=await res.json();gistId=d.id;
+      alert('Sync database created!\n\nGist ID: '+gistId+'\n\nWrite this down — enter it on your other device to link them.');
     }
-    syncGistId = gistId;
-    saveSyncConfig({token: syncToken, gistId: syncGistId});
-    updateSyncButton(true);
-    if(pollHandle) clearInterval(pollHandle);
-    await pollOnce();
-    pollHandle = setInterval(pollOnce, 5000);
-    if(!silent) closeModal();
+    syncGistId=gistId;saveSyncCfg({token:syncToken,gistId:syncGistId});
+    updateSyncBtn(true);
+    if(pollHandle)clearInterval(pollHandle);
+    await pollOnce();pollHandle=setInterval(pollOnce,5000);
+    if(!silent)closeModal();
   }catch(err){
-    console.warn(err);
-    updateSyncButton(false);
-    if(!silent) alert('Could not connect to sync.\n\n'+err.message+'\n\nCheck your Personal Access Token and Gist ID are correct.');
+    console.warn(err);updateSyncBtn(false);
+    if(!silent)alert('Could not connect.\n\n'+err.message+'\n\nCheck your token and Gist ID.');
   }
 }
 
 async function pollOnce(){
-  if(!syncToken || !syncGistId) return;
+  if(!syncToken||!syncGistId)return;
   try{
-    const res = await fetch('https://api.github.com/gists/'+syncGistId, {
-      headers: {'Authorization':'token '+syncToken,'Accept':'application/vnd.github+json'}
-    });
-    if(!res.ok) return;
-    const data = await res.json();
-    const file = data.files && data.files['homeworkTracker.json'];
-    if(!file) return;
-    const record = JSON.parse(file.content);
-    const remoteJson = record && record.state;
-    if(remoteJson && remoteJson !== lastRemoteJson){
-      lastRemoteJson = remoteJson;
-      applyingRemote = true;
-      state = JSON.parse(remoteJson);
-      renderAll()
-      if(!state.classOrder.includes(activeClassId)) activeClassId=state.classOrder[0]||null;
-      localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
-      applyingRemote = false;
+    const res=await fetch('https://api.github.com/gists/'+syncGistId,
+      {headers:{'Authorization':'token '+syncToken,'Accept':'application/vnd.github+json'}});
+    if(!res.ok)return;
+    const data=await res.json();
+    const file=data.files&&data.files['homeworkTracker.json'];if(!file)return;
+    const record=JSON.parse(file.content);
+    const remoteJson=record&&record.json;if(!remoteJson)return;
+    if(remoteJson===lastRemoteJson)return;
+    const remoteState=JSON.parse(remoteJson);
+    // Don't overwrite local non-empty data with empty remote
+    if(remoteState.classOrder.length===0&&state.classOrder.length>0){
+      lastRemoteJson=remoteJson;pushToCloud();return;
     }
-  }catch(err){ console.warn('Poll failed',err); }
+    lastRemoteJson=remoteJson;applyingRemote=true;
+    state=remoteState;
+    if(!state.classOrder.includes(activeClassId))activeClassId=state.classOrder[0]||null;
+    localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
+    renderAll();applyingRemote=false;
+  }catch(e){console.warn('Poll failed',e);}
 }
 
 async function pushToCloud(){
-  if(!syncToken || !syncGistId || applyingRemote) return;
-  const json = JSON.stringify(state);
-  lastRemoteJson = json;
+  if(!syncToken||!syncGistId||applyingRemote)return;
+  const json=JSON.stringify(state);lastRemoteJson=json;
   try{
-    await fetch('https://api.github.com/gists/'+syncGistId, {
-      method: 'PATCH',
-      headers: {'Authorization':'token '+syncToken,'Content-Type':'application/json','Accept':'application/vnd.github+json'},
-      body: JSON.stringify({ files: { 'homeworkTracker.json': { content: JSON.stringify({state: json, updatedAt: Date.now()}) } } })
-    });
-  }catch(err){ console.warn('Push failed',err); }
+    await fetch('https://api.github.com/gists/'+syncGistId,{method:'PATCH',
+      headers:{'Authorization':'token '+syncToken,'Content-Type':'application/json','Accept':'application/vnd.github+json'},
+      body:JSON.stringify({files:{'homeworkTracker.json':{content:JSON.stringify({json,updatedAt:Date.now()})}}})});
+  }catch(e){console.warn('Push failed',e);}
 }
 
-function updateSyncButton(on){
-  const b=document.getElementById('syncStatusBtn');
-  if(b) b.textContent=on?'☁️ Sync: On':'☁️ Sync: Off';
-}
+function updateSyncBtn(on){const b=document.getElementById('syncStatusBtn');if(b)b.textContent=on?'☁️ Sync: On':'☁️ Sync: Off';}
 
 function showSyncPanel(){
-  const cfg=loadSyncConfig()||{};
+  const c=loadSyncCfg()||{};
   showModal(`<h3>☁️ Sync between devices</h3>
-    <p>You need a <b>GitHub Personal Access Token</b> to sync. Create one at:<br>
-    <b>github.com → Settings → Developer settings → Personal access tokens → Tokens (classic) → Generate new token</b><br>
-    Tick only the <b>gist</b> scope. Copy the token and paste below.</p>
-    <div style="margin-bottom:8px;"><input type="text" id="cfgToken" placeholder="GitHub Personal Access Token (ghp_...)" value="${esc(cfg.token||'')}" style="width:100%;font-size:12px;"></div>
-    <div style="margin-bottom:8px;"><input type="text" id="cfgGistId" placeholder="Gist ID (leave blank on first device)" value="${esc(cfg.gistId||'')}" style="width:100%;"></div>
-    <p style="font-size:11px;">Leave Gist ID blank on first device — app creates one automatically and shows the ID. Enter the same Gist ID on other devices.</p>
-    <div class="btn-row">
-      <button class="btn-ghost" onclick="closeModal()">Cancel</button>
-      <button class="btn-main" onclick="onConnectSync()">Connect</button>
-    </div>`);
+    <p>Create a GitHub Personal Access Token at:<br><b>github.com → Settings → Developer settings → Personal access tokens → Tokens (classic) → Generate new token (classic)</b><br>Tick only the <b>gist</b> scope.</p>
+    <div style="margin-bottom:8px;"><input type="text" id="cfgToken" placeholder="GitHub token (ghp_...)" value="${esc(c.token||'')}" style="width:100%;font-size:12px;"></div>
+    <div style="margin-bottom:8px;"><input type="text" id="cfgGistId" placeholder="Gist ID (leave blank on first device)" value="${esc(c.gistId||'')}" style="width:100%;"></div>
+    <p style="font-size:11px;">Leave Gist ID blank on first device — app creates one and shows you the ID. Enter the same ID on other devices.</p>
+    <div class="btn-row"><button class="btn-ghost" onclick="closeModal()">Cancel</button><button class="btn-main" onclick="onConnectSync()">Connect</button></div>`);
 }
-
 function onConnectSync(){
-  const token=document.getElementById('cfgToken').value.trim();
-  const gistId=document.getElementById('cfgGistId').value.trim();
-  if(!token){ alert('Please enter your GitHub Personal Access Token.'); return; }
-  connectSync(token, gistId, false);
+  const t=document.getElementById('cfgToken').value.trim();
+  const g=document.getElementById('cfgGistId').value.trim();
+  if(!t){alert('Please enter your GitHub token.');return;}
+  connectSync(t,g,false);
 }
 
+// ── CLASS MANAGEMENT ──────────────────────────────────────────────────────────
+function getClass(){return activeClassId?state.classes[activeClassId]:null;}
 
-
-function deleteActiveClass(){
-  if(activeClassId) deleteClass(activeClassId);
-}
-
-function deleteClass(classId){
-  const c = state.classes[classId];
-  if(!c) return;
-  const studentCount = c.students.length;
-  const hwCount = c.homeworks.length;
-  const confirmed = confirm(
-    `⚠️ Delete "${c.name}"?\n\nThis will permanently remove:\n• ${studentCount} student(s)\n• ${hwCount} homework column(s)\n• All recorded statuses\n\nThis cannot be undone. Are you sure?`
-  );
-  if(!confirmed) return;
-  // Second confirmation for extra safety
-  const doubleConfirmed = confirm(`Final check — permanently delete all data for "${c.name}"?`);
-  if(!doubleConfirmed) return;
-
-  state.classOrder = state.classOrder.filter(id => id !== classId);
-  delete state.classes[classId];
-  activeClassId = state.classOrder[0] || null;
-  saveState();
-  renderAll();
+function renderClassRow(){
+  const row=document.getElementById('classRow');row.innerHTML='';
+  state.classOrder.forEach(id=>{
+    const c=state.classes[id];
+    const chip=document.createElement('div');
+    chip.className='class-chip'+(id===activeClassId?' active':'');
+    chip.textContent=c.name;chip.onclick=()=>{activeClassId=id;renderAll();};
+    row.appendChild(chip);
+  });
+  const d=document.getElementById('deleteClassBtn');if(d)d.style.display=activeClassId?'inline-block':'none';
 }
 
 function addClass(name){
-  if(!name.trim()) return;
-  const id = uid('cls');
-  state.classes[id] = { id, name: name.trim(), students: [], homeworks: [], statuses: {} };
-  state.classOrder.push(id);
-  activeClassId = id;
+  if(!name.trim())return;
+  const id=uid('cls');
+  state.classes[id]={id,name:name.trim(),students:[],homeworks:[],statuses:{}};
+  state.classOrder.push(id);activeClassId=id;saveState();renderAll();
+}
+function deleteActiveClass(){if(activeClassId)deleteClass(activeClassId);}
+function deleteClass(classId){
+  const c=state.classes[classId];if(!c)return;
+  if(!confirm(`⚠️ Delete "${c.name}"?\n\nPermanently removes:\n• ${c.students.length} student(s)\n• ${c.homeworks.length} homework(s)\n• All recorded statuses\n\nCannot be undone.`))return;
+  if(!confirm(`Final check — permanently delete all data for "${c.name}"?`))return;
+  state.classOrder=state.classOrder.filter(id=>id!==classId);
+  delete state.classes[classId];activeClassId=state.classOrder[0]||null;saveState();renderAll();
+}
+
+// ── STUDENT MANAGEMENT ────────────────────────────────────────────────────────
+function addStudent(name){
+  const c=getClass();if(!c||!name.trim())return;
+  c.students.push({id:uid('stu'),name:name.trim()});saveState();renderTable();renderReportSel();
+}
+function deleteStudent(stuId){
+  const c=getClass();if(!c)return;
+  if(!confirm('Remove this student?'))return;
+  c.students=c.students.filter(s=>s.id!==stuId);delete c.statuses[stuId];saveState();renderTable();renderReportSel();
+}
+
+// ── HOMEWORK MANAGEMENT ───────────────────────────────────────────────────────
+function addHomework(name,date){
+  const c=getClass();if(!c||!name.trim())return;
+  const id=uid('hw');c.homeworks.push({id,name:name.trim(),date:date||'',locked:false,hidden:false});
+  saveState();renderTable();
+}
+function deleteHomework(hwId){
+  const c=getClass();if(!c)return;
+  const hw=c.homeworks.find(h=>h.id===hwId);
+  if(hw&&hw.locked){alert('Column is locked. Tap 🔒 to unlock first.');return;}
+  if(!confirm(`Delete "${hw?hw.name:''}" and all its statuses?`))return;
+  c.homeworks=c.homeworks.filter(h=>h.id!==hwId);
+  Object.keys(c.statuses).forEach(sid=>{if(c.statuses[sid])delete c.statuses[sid][hwId];});
+  saveState();renderTable();
+}
+function toggleHwLock(hwId){
+  const c=getClass();const hw=c&&c.homeworks.find(h=>h.id===hwId);if(!hw)return;
+  hw.locked=!hw.locked;saveState();renderTable();
+}
+function hideHw(hwId){
+  const c=getClass();const hw=c&&c.homeworks.find(h=>h.id===hwId);if(!hw)return;
+  if(!confirm(`Hide "${hw.name}"? Data preserved — use Unhide to show again.`))return;
+  hw.hidden=true;saveState();renderTable();
+}
+function showUnhidePanel(){
+  const c=getClass();if(!c)return;
+  let hidden=c.homeworks.filter(h=>!!h.hidden).sort((a,b)=>b.date.localeCompare(a.date));
+  if(!hidden.length){alert('No hidden homework columns.');return;}
+  let sel=new Set();
+  let btns=hidden.map(h=>`<div id="uhsel_${h.id}" onclick="toggleUhSel('${h.id}')" style="padding:10px 14px;border-radius:10px;border:2px solid var(--line);background:white;cursor:pointer;margin-bottom:8px;">
+    <div style="font-weight:700;">${esc(h.name)}</div>
+    <div style="font-size:12px;color:var(--pending);">${h.date||'No date'}</div></div>`).join('');
+  showModal(`<h3>Unhide homework columns</h3><p>Tap to select, then tap Unhide selected.</p>
+    <div id="uhList">${btns}</div>
+    <div class="btn-row" style="margin-top:12px;">
+      <button class="btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn-main" onclick="confirmUnhide()">Unhide selected</button>
+    </div>`);
+  window._uhSel=new Set();
+}
+function toggleUhSel(id){
+  if(!window._uhSel)window._uhSel=new Set();
+  const el=document.getElementById('uhsel_'+id);
+  if(window._uhSel.has(id)){window._uhSel.delete(id);el.style.borderColor='var(--line)';el.style.background='white';}
+  else{window._uhSel.add(id);el.style.borderColor='var(--accent)';el.style.background='var(--missing-bg)';}
+}
+function confirmUnhide(){
+  if(!window._uhSel||!window._uhSel.size){alert('No columns selected.');return;}
+  const c=getClass();if(!c)return;
+  const names=[...window._uhSel].map(id=>{const h=c.homeworks.find(h=>h.id===id);return h?h.name:'';}).filter(Boolean);
+  if(!confirm(`Unhide these columns?\n\n${names.join('\n')}`))return;
+  window._uhSel.forEach(id=>{const h=c.homeworks.find(h=>h.id===id);if(h)h.hidden=false;});
+  window._uhSel=new Set();saveState();closeModal();renderTable();
+}
+
+// ── STATUS MANAGEMENT ─────────────────────────────────────────────────────────
+const STATUS_OPTIONS=[['','Not submitted'],['submitted','Submitted'],['perfect','Perfect'],['completed','Completed']];
+
+function setStatus(stuId,hwId,status){
+  const c=getClass();if(!c)return;
+  if(!c.statuses[stuId])c.statuses[stuId]={};
+  if(status==='')delete c.statuses[stuId][hwId];
+  else c.statuses[stuId][hwId]=status;
   saveState();
-  renderAll();
 }
 
-function renderAll(){
-  renderClassRow();
-  renderContent();
-}
-
-function renderClassRow(){
-  const row = document.getElementById('classRow');
-  row.innerHTML = '';
-  state.classOrder.forEach(id => {
-    const c = state.classes[id];
-    const chip = document.createElement('div');
-    chip.className = 'class-chip' + (id === activeClassId ? ' active' : '');
-    chip.textContent = c.name;
-    chip.onclick = () => { activeClassId = id; renderAll(); };
-    row.appendChild(chip);
-  });
-
-  // Show delete class button only when a class is active
-  const delBtn = document.getElementById('deleteClassBtn');
-  if(delBtn) delBtn.style.display = activeClassId ? 'inline-block' : 'none';
-}
-
-function getActiveClass(){
-  return activeClassId ? state.classes[activeClassId] : null;
-}
+// ── RENDER ────────────────────────────────────────────────────────────────────
+function renderAll(){renderClassRow();renderContent();}
 
 function renderContent(){
-  const content = document.getElementById('content');
-  const c = getActiveClass();
-  if(!c){
-    content.innerHTML = '<div class="empty-state">Add a class above to get started.</div>';
-    return;
-  }
-
-  content.innerHTML = `
-    <div class="panel" id="addStudentPanel">
+  const content=document.getElementById('content');
+  const c=getClass();
+  if(!c){content.innerHTML='<div class="empty-state">Add a class above to get started.</div>';return;}
+  content.innerHTML=`
+    <div class="panel">
       <h2>Students</h2>
-      <div class="row">
-        <input type="text" id="newStudentName" placeholder="Student name">
-        <button class="btn-main" id="addStudentBtn">Add student</button>
+      <div class="row-f">
+        <input type="text" id="newStuName" placeholder="Student name" style="flex:1">
+        <button class="btn-main" id="addStuBtn">Add</button>
       </div>
     </div>
-
-    <div class="panel" id="addHwPanel">
-      <h2>New homework</h2>
-      <div class="row">
-        <input type="text" id="newHwName" placeholder="Homework name (e.g. Worksheet 3)">
+    <div class="panel">
+      <h2>Homework columns</h2>
+      <div class="row-f">
+        <input type="text" id="newHwName" placeholder="Homework name" style="flex:1">
         <input type="date" id="newHwDate">
-        <button class="btn-main" id="addHwBtn">Add homework column</button>
+        <button class="btn-main" id="addHwBtn">Add</button>
+        <button class="btn-ghost" id="unhideBtn">👁 Unhide</button>
       </div>
     </div>
-
     <div class="panel">
       <h2>Spreadsheet</h2>
       <div class="table-scroll" id="tableWrap"></div>
     </div>
-
     <div class="panel">
-      <h2>Reports & export</h2>
-      <div class="btn-row">
-        <select id="reportStudentSelect"></select>
-        <button class="btn-ghost" id="genReportBtn">Generate Word report</button>
+      <h2>Reports & Export</h2>
+      <div class="row-f">
+        <select id="reportStuSel"></select>
+        <button class="btn-ghost" id="genOneBtn">Word report (1 student)</button>
       </div>
-      <div class="btn-row" style="margin-top:8px;">
-        <button class="btn-ghost" id="genAllReportsBtn">Generate report for whole class (1 page per student)</button>
+      <div class="row-f">
+        <button class="btn-main" id="genAllBtn">Word report (all students)</button>
+        <button class="btn-ghost" id="excelBtn">Export to Excel</button>
       </div>
-      <div class="btn-row" style="margin-top:8px;">
-        <button class="btn-main" id="exportExcelBtn">Export class to Excel</button>
-      </div>
-    </div>
-  `;
-
-  document.getElementById('newHwDate').value = new Date().toISOString().slice(0,10);
-  document.getElementById('addStudentBtn').onclick = () => {
-    const input = document.getElementById('newStudentName');
-    addStudent(input.value);
-    input.value = '';
-    input.focus();
-  };
-  document.getElementById('newStudentName').addEventListener('keydown', e => {
-    if(e.key === 'Enter'){ addStudent(e.target.value); e.target.value=''; }
-  });
-  document.getElementById('addHwBtn').onclick = () => {
-    const name = document.getElementById('newHwName').value;
-    const date = document.getElementById('newHwDate').value;
-    addHomework(name, date);
-    document.getElementById('newHwName').value = '';
-  };
-  document.getElementById('exportExcelBtn').onclick = exportExcel;
-  document.getElementById('genReportBtn').onclick = generateWordReport;
-  document.getElementById('genAllReportsBtn').onclick = generateAllReports;
-
-  renderTable();
-  renderReportSelect();
+    </div>`;
+  document.getElementById('newHwDate').value=new Date().toISOString().slice(0,10);
+  document.getElementById('addStuBtn').onclick=()=>{const i=document.getElementById('newStuName');addStudent(i.value);i.value='';i.focus();};
+  document.getElementById('newStuName').addEventListener('keydown',e=>{if(e.key==='Enter'){addStudent(e.target.value);e.target.value='';}});
+  document.getElementById('addHwBtn').onclick=()=>{const n=document.getElementById('newHwName'),d=document.getElementById('newHwDate');addHomework(n.value,d.value);n.value='';};
+  document.getElementById('unhideBtn').onclick=showUnhidePanel;
+  document.getElementById('genOneBtn').onclick=()=>{const s=document.getElementById('reportStuSel');if(!s.value){alert('Select a student.');return;}generateWordReport([s.value]);};
+  document.getElementById('genAllBtn').onclick=()=>{const c=getClass();if(!c||!c.students.length){alert('No students.');return;}generateWordReport(c.students.map(s=>s.id));};
+  document.getElementById('excelBtn').onclick=exportExcel;
+  renderTable();renderReportSel();
 }
 
-function addStudent(name){
-  if(!name.trim()) return;
-  const c = getActiveClass();
-  c.students.push({ id: uid('stu'), name: name.trim() });
-  saveState();
-  renderTable();
-  renderReportSelect();
+function renderReportSel(){
+  const sel=document.getElementById('reportStuSel');if(!sel)return;
+  const c=getClass();sel.innerHTML='';
+  (c?c.students:[]).forEach(s=>{const o=document.createElement('option');o.value=s.id;o.textContent=s.name;sel.appendChild(o);});
 }
 
-function addHomework(name, date){
-  if(!name.trim()) return;
-  const c = getActiveClass();
-  const id = uid('hw');
-  c.homeworks.push({ id, name: name.trim(), date: date || '' });
-  saveState();
-  renderTable();
-}
-
-function toggleHwLock(hwId){
-  const c = getActiveClass();
-  const hw = c.homeworks.find(h => h.id === hwId);
-  if(!hw) return;
-  hw.locked = !hw.locked;
-  saveState();
-  renderTable();
-}
-
-function deleteHomework(hwId){
-  const c = getActiveClass();
-  const hw = c.homeworks.find(h => h.id === hwId);
-  if(hw && hw.locked){
-    alert('This column is locked. Tap 🔒 to unlock it first before deleting.');
-    return;
-  }
-  if(!confirm(`Delete the homework column "${hw ? hw.name : ''}"?\n\nThis removes all recorded statuses for this homework. This cannot be undone.`)) return;
-  c.homeworks = c.homeworks.filter(h => h.id !== hwId);
-  Object.keys(c.statuses).forEach(stuId => { delete c.statuses[stuId]?.[hwId]; });
-  saveState();
-  renderTable();
-}
-
-function deleteStudent(stuId){
-  const c = getActiveClass();
-  if(!confirm('Remove this student?')) return;
-  c.students = c.students.filter(s => s.id !== stuId);
-  delete c.statuses[stuId];
-  saveState();
-  renderTable();
-  renderReportSelect();
-}
-
-function setStatus(stuId, hwId, status){
-  const c = getActiveClass();
-  if(!c.statuses[stuId]) c.statuses[stuId] = {};
-  if(status === '') delete c.statuses[stuId][hwId];
-  else c.statuses[stuId][hwId] = status;
-  saveState();
-}
-
-const STATUS_OPTIONS = [
-  ['', 'Blank (not submitted)'],
-  ['submitted', 'Submitted'],
-  ['perfect', 'Perfect (no correction)'],
-  ['completed', 'Completed (corrections cleared)']
-];
+function statusClass(st){return st?'st-'+st:'st-empty';}
+function statusLabel(st){return{submitted:'Submitted',perfect:'Perfect',completed:'Completed'}[st]||'';}
 
 function renderTable(){
-  const wrap = document.getElementById('tableWrap');
-  const c = getActiveClass();
-  if(!c){ wrap.innerHTML=''; return; }
-  if(c.homeworks.length === 0){
-    wrap.innerHTML = '<div class="empty-state">Add a homework column above to start tracking.</div>';
-    return;
-  }
-  if(c.students.length === 0){
-    wrap.innerHTML = '<div class="empty-state">Add students above. For the first homework, key them in by hand; afterwards you can scan worksheets instead.</div>';
-  }
+  const wrap=document.getElementById('tableWrap');const c=getClass();
+  if(!c){wrap.innerHTML='';return;}
+  const visible=c.homeworks.filter(h=>!h.hidden);
+  if(!visible.length){wrap.innerHTML='<div class="empty-state">Add homework columns above.</div>';return;}
+  if(!c.students.length){wrap.innerHTML='<div class="empty-state">Add students above.</div>';return;}
 
-  let html = '<table><thead><tr><th>Student</th>';
-  c.homeworks.forEach(hw => {
-    const isLocked = !!hw.locked;
-    html += `<th><div class="hw-head">
-      <span class="hw-name">${escapeHtml(hw.name)}</span>
-      <span class="hw-date">${hw.date || ''}</span>
-      <div class="hw-actions">
-        <select id="scanStatus_${hw.id}">
-          <option value="submitted">Submitted</option>
-          <option value="perfect">Perfect</option>
-          <option value="completed">Completed</option>
-        </select>
-        <button class="btn-ghost" onclick="showOverview('${hw.id}')">👀 Overview</button>
-        <button class="btn-ghost" title="${isLocked ? 'Locked — tap to unlock column' : 'Tap to lock column (prevents deletion)'}" onclick="toggleHwLock('${hw.id}')">${isLocked ? '🔒' : '🔓'}</button>
-        ${isLocked ? '' : `<button class="btn-ghost" onclick="deleteHomework('${hw.id}')">✕</button>`}
-      </div>
-    </div></th>`;
+  let h='<table><thead><tr><th style="text-align:left;min-width:110px;">Student</th>';
+  visible.forEach(hw=>{
+    const lk=!!hw.locked;
+    h+=`<th class="hw-hd">${esc(hw.name)}<br><span style="font-size:10px;font-weight:400;color:var(--pending);">${hw.date||''}</span>
+      <br><span style="display:inline-flex;gap:2px;margin-top:2px;">
+        <button class="btn-ghost" style="font-size:10px;padding:2px 5px;" onclick="toggleHwLock('${hw.id}')">${lk?'🔒':'🔓'}</button>
+        <button class="btn-ghost" style="font-size:10px;padding:2px 5px;" onclick="hideHw('${hw.id}')">👁 Hide</button>
+        <button class="btn-ghost" style="font-size:10px;padding:2px 5px;" onclick="showOverview('${hw.id}')">👀</button>
+        ${lk?'':`<button class="btn-ghost" style="font-size:10px;padding:2px 5px;" onclick="deleteHomework('${hw.id}')">✕</button>`}
+      </span></th>`;
   });
-  html += '</tr></thead><tbody>';
-
-  c.students.forEach(s => {
-    html += `<tr><td>${escapeHtml(s.name)}
-      <div style="margin-top:4px;display:flex;gap:4px;">
-        <button class="btn-ghost" style="padding:2px 6px;font-size:11px;" onclick="deleteStudent('${s.id}')">✕</button>
-      </div>
-    </td>`;
-    c.homeworks.forEach(hw => {
-      const current = (c.statuses[s.id] && c.statuses[s.id][hw.id]) || '';
-      const cls = current ? 'status-' + current : 'status-empty';
-      html += `<td class="status-cell ${cls}"><select onchange="setStatus('${s.id}','${hw.id}',this.value); renderTable();">`;
-      STATUS_OPTIONS.forEach(([val, label]) => {
-        html += `<option value="${val}" ${val===current?'selected':''}>${label}</option>`;
-      });
-      html += `</select></td>`;
+  h+='</tr></thead><tbody>';
+  c.students.forEach(s=>{
+    h+=`<tr><td>${esc(s.name)} <button class="del-btn" onclick="deleteStudent('${s.id}')">✕</button></td>`;
+    visible.forEach(hw=>{
+      const st=(c.statuses[s.id]&&c.statuses[s.id][hw.id])||'';
+      h+=`<td class="${statusClass(st)}"><select onchange="setStatus('${s.id}','${hw.id}',this.value);renderTable();">`;
+      STATUS_OPTIONS.forEach(([v,l])=>{h+=`<option value="${v}"${v===st?' selected':''}>${l}</option>`;});
+      h+=`</select></td>`;
     });
-    html += '</tr>';
+    h+='</tr>';
   });
-  html += '</tbody></table>';
-  wrap.innerHTML = html;
+  h+='</tbody></table>';
+  wrap.innerHTML=h;
 }
 
-function renderReportSelect(){
-  const sel = document.getElementById('reportStudentSelect');
-  if(!sel) return;
-  const c = getActiveClass();
-  sel.innerHTML = '';
-  c.students.forEach(s => {
-    const opt = document.createElement('option');
-    opt.value = s.id; opt.textContent = s.name;
-    sel.appendChild(opt);
+// ── OVERVIEW POPUP ────────────────────────────────────────────────────────────
+let ovHwId=null,massMode=null;
+function showOverview(hwId){ovHwId=hwId;massMode=null;renderOverview();}
+function renderOverview(){
+  const c=getClass();const hw=c&&c.homeworks.find(h=>h.id===ovHwId);if(!hw)return;
+  const massBtn=(st,lbl)=>{const on=massMode===st;return`<button class="${on?'btn-active':'btn-ghost'}" onclick="toggleMass('${st}')">${on?'✓ ':''} ${lbl}</button>`;};
+  let html=`<h3>${esc(hw.name)}</h3><p>${hw.date||''} — tap a student to update status.</p>
+    <p style="font-size:12px;color:var(--pending);margin-bottom:6px;">Mass update: pick a status then tap students.</p>
+    <div class="btn-row">${massBtn('submitted','Submitted')}${massBtn('perfect','Perfect')}${massBtn('completed','Completed')}</div>
+    <div class="pill-grid">`;
+  c.students.forEach(s=>{
+    const st=(c.statuses[s.id]&&c.statuses[s.id][ovHwId])||'';
+    html+=`<div class="pill pill-${st||'empty'}" id="pill_${s.id}" onclick="onPillClick('${s.id}')">${esc(s.name)}</div>`;
   });
+  html+=`</div><div class="btn-row" style="margin-top:10px;"><button class="btn-main" onclick="closeModal()">Close</button></div>`;
+  showModal(html);
 }
-
-function esc(str){ return String(str||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
-
-function escapeHtml(str){
-  return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-}
-
-
-// ---------- AT-A-GLANCE OVERVIEW ----------
-let overviewHwId = null;
-let massModeStatus = null; // null, 'submitted', 'completed', 'perfect'
-
-function showOverview(hwId){
-  overviewHwId = hwId;
-  massModeStatus = null;
-  renderOverviewModal();
-}
-
-function renderOverviewModal(){
-  const c = getActiveClass();
-  const hw = c.homeworks.find(h => h.id === overviewHwId);
-  const overlay = document.getElementById('modalOverlay');
-  const body = document.getElementById('modalBody');
-
-  const massBtn = (status, label) => {
-    const active = massModeStatus === status;
-    return `<button class="btn-${active ? 'main' : 'ghost'}" onclick="toggleMassMode('${status}')">${active ? '✓ ' : ''}${label}</button>`;
-  };
-
-  let html = `<h3>${escapeHtml(hw.name)}</h3><p>${hw.date || ''} — tap a student to update their status.</p>`;
-  html += `<p style="font-size:12px;color:var(--pending);margin-bottom:6px;">Mass update: pick a status, then tap students to apply it. Tap the status button again to stop.</p>`;
-  html += `<div class="btn-row">${massBtn('submitted','Submitted')}${massBtn('perfect','Perfect')}${massBtn('completed','Completed')}</div>`;
-  html += `<div class="pill-grid">`;
-  c.students.forEach(s => {
-    const current = (c.statuses[s.id] && c.statuses[s.id][overviewHwId]) || '';
-    const pillClass = current ? 'pill-' + current : 'pill-empty';
-    html += `<div class="pill ${pillClass}" id="pill_${s.id}" onclick="onPillClick('${s.id}')">${escapeHtml(s.name)}</div>`;
-  });
-  html += `</div><div class="btn-row" style="margin-top:10px;"><button class="btn-main" onclick="closeModal()">Close</button></div>`;
-  body.innerHTML = html;
-  overlay.classList.add('show');
-}
-
-function toggleMassMode(status){
-  massModeStatus = (massModeStatus === status) ? null : status;
-  renderOverviewModal();
-}
-
+function toggleMass(st){massMode=(massMode===st)?null:st;renderOverview();}
 function onPillClick(stuId){
-  if(massModeStatus){
-    setStatus(stuId, overviewHwId, massModeStatus);
-    renderOverviewModal();
-    renderTable();
-    return;
-  }
-  togglePillDropdown(stuId);
-}
-
-function togglePillDropdown(stuId){
-  const existing = document.getElementById('dropdown_' + stuId);
-  // close any other open dropdown first
-  document.querySelectorAll('.pill-dropdown').forEach(el => el.remove());
-  if(existing) return; // it was already open, just closed it above
-
-  const pill = document.getElementById('pill_' + stuId);
-  const dropdown = document.createElement('div');
-  dropdown.className = 'pill-dropdown';
-  dropdown.id = 'dropdown_' + stuId;
-  STATUS_OPTIONS.forEach(([val, label]) => {
-    const btn = document.createElement('button');
-    btn.textContent = label;
-    btn.onclick = (e) => {
-      e.stopPropagation();
-      setStatus(stuId, overviewHwId, val);
-      renderOverviewModal();
-      renderTable();
-    };
-    dropdown.appendChild(btn);
+  if(massMode){setStatus(stuId,ovHwId,massMode);renderOverview();renderTable();return;}
+  // Dropdown
+  document.querySelectorAll('.pill-dropdown').forEach(el=>el.remove());
+  const pill=document.getElementById('pill_'+stuId);
+  const dd=document.createElement('div');dd.className='pill-dropdown';
+  STATUS_OPTIONS.forEach(([v,l])=>{
+    const btn=document.createElement('button');btn.textContent=l;
+    btn.onclick=(e)=>{e.stopPropagation();setStatus(stuId,ovHwId,v);renderOverview();renderTable();};
+    dd.appendChild(btn);
   });
-  pill.appendChild(dropdown);
+  pill.appendChild(dd);
 }
 
-function showModal(html){
-  document.getElementById('modalBody').innerHTML = html;
-  document.getElementById('modalOverlay').classList.add('show');
-}
-
-function closeModal(){
-  document.getElementById('modalOverlay').classList.remove('show');
-  pendingScan = null;
-}
-
-// ---------- EXPORT TO EXCEL ----------
+// ── EXCEL EXPORT ──────────────────────────────────────────────────────────────
 function exportExcel(){
-  const c = getActiveClass();
-  if(!c) return;
-  const header = ['Student', ...c.homeworks.map(h => `${h.name} (${h.date || ''})`)];
-  const rows = c.students.map(s => {
-    const row = [s.name];
-    c.homeworks.forEach(hw => {
-      const st = (c.statuses[s.id] && c.statuses[s.id][hw.id]) || '';
-      row.push(st ? st.charAt(0).toUpperCase() + st.slice(1) : '');
-    });
+  const c=getClass();if(!c)return;
+  const visible=c.homeworks.filter(h=>!h.hidden);
+  const header=['Student',...visible.map(h=>`${h.name} (${h.date||''})`)];
+  const rows=c.students.map(s=>{
+    const row=[s.name];
+    visible.forEach(hw=>{const st=(c.statuses[s.id]&&c.statuses[s.id][hw.id])||'';row.push(st?st.charAt(0).toUpperCase()+st.slice(1):'');});
     return row;
   });
-  const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, c.name.slice(0,31));
-  XLSX.writeFile(wb, `${c.name.replace(/[^a-z0-9]/gi,'_')}_homework.xlsx`);
+  const ws=XLSX.utils.aoa_to_sheet([header,...rows]);
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,c.name.slice(0,31));
+  XLSX.writeFile(wb,`${c.name.replace(/[^a-z0-9]/gi,'_')}_homework.xlsx`);
 }
 
-// ---------- WORD REPORT (real .docx, built by hand with JSZip) ----------
-function escapeXml(str){
-  return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[m]));
+// ── WORD REPORT ───────────────────────────────────────────────────────────────
+function dp(text,opts){
+  opts=opts||{};const rp=[];
+  if(opts.bold)rp.push('<w:b/>');
+  if(opts.size)rp.push(`<w:sz w:val="${opts.size}"/><w:szCs w:val="${opts.size}"/>`);
+  const rPr=rp.length?`<w:rPr>${rp.join('')}</w:rPr>`:'';
+  const pPr=(opts.bold||opts.size)?`<w:pPr><w:rPr>${rp.join('')}</w:rPr></w:pPr>`:'';
+  return`<w:p>${pPr}<w:r>${rPr}<w:t xml:space="preserve">${escX(text)}</w:t></w:r></w:p>`;
+}
+function pageBreak(){return`<w:p><w:r><w:br w:type="page"/></w:r></w:p>`;}
+function dtable(headers,rows,colWidths){
+  const cell=(txt,bold,colW)=>{const wXml=colW?`<w:tcW w:w="${colW}" w:type="dxa"/>`:'';
+    return`<w:tc><w:tcPr>${wXml}<w:tcBorders>
+    <w:top w:val="single" w:sz="4" w:color="000000"/>
+    <w:left w:val="single" w:sz="4" w:color="000000"/>
+    <w:bottom w:val="single" w:sz="4" w:color="000000"/>
+    <w:right w:val="single" w:sz="4" w:color="000000"/>
+  </w:tcBorders></w:tcPr><w:p><w:pPr><w:spacing w:before="0" w:after="60"/></w:pPr>
+  <w:r><w:rPr>${bold?'<w:b/>':''}<w:sz w:val="20"/></w:rPr>
+  <w:t xml:space="preserve">${escX(String(txt))}</w:t></w:r></w:p></w:tc>`;};
+  const cw=colWidths||[];const totalW=cw.reduce((a,b)=>a+b,0)||9000;
+  const tblGrid=cw.length?`<w:tblGrid>${cw.map(w=>`<w:gridCol w:w="${w}"/>`).join('')}</w:tblGrid>`:'';
+  return`<w:tbl><w:tblPr><w:tblW w:w="${totalW}" w:type="dxa"/><w:tblLayout w:type="fixed"/></w:tblPr>${tblGrid}
+    <w:tr>${headers.map((h,i)=>cell(h,true,cw[i])).join('')}</w:tr>
+    ${rows.map(r=>`<w:tr>${r.map((c,i)=>cell(c,false,cw[i])).join('')}</w:tr>`).join('')}</w:tbl>`;
 }
 
-function docxParagraph(text, opts){
-  opts = opts || {};
-  const props = [];
-  if(opts.bold) props.push('<w:b/>');
-  if(opts.size) props.push(`<w:sz w:val="${opts.size}"/><w:szCs w:val="${opts.size}"/>`);
-  const rPr = props.length ? `<w:rPr>${props.join('')}</w:rPr>` : '';
-  const pageBreak = opts.pageBreakBefore ? '<w:r><w:br w:type="page"/></w:r>' : '';
-  return `<w:p>${opts.bold || opts.size ? `<w:pPr><w:rPr>${props.join('')}</w:rPr></w:pPr>` : ''}${pageBreak}<w:r>${rPr}<w:t xml:space="preserve">${escapeXml(text)}</w:t></w:r></w:p>`;
-}
-
-function docxTableCell(text, opts){
-  opts = opts || {};
-  const rPr = opts.bold ? '<w:rPr><w:b/></w:rPr>' : '';
-  const pPr = opts.bold ? `<w:pPr>${rPr}</w:pPr>` : '';
-  return `<w:tc><w:tcPr><w:tcW w:w="${opts.width || 2500}" w:type="dxa"/></w:tcPr><w:p>${pPr}<w:r>${rPr}<w:t xml:space="preserve">${escapeXml(text)}</w:t></w:r></w:p></w:tc>`;
-}
-
-function docxTableRow(cells){ return `<w:tr>${cells.join('')}</w:tr>`; }
-
-function docxTable(headerCells, dataRows, widths){
-  const gridCols = widths.map(w => `<w:gridCol w:w="${w}"/>`).join('');
-  const borders = `<w:tblBorders><w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/><w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/><w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/><w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/><w:insideH w:val="single" w:sz="4" w:space="0" w:color="auto"/><w:insideV w:val="single" w:sz="4" w:space="0" w:color="auto"/></w:tblBorders>`;
-  const headerRow = docxTableRow(headerCells.map((text, i) => docxTableCell(text, { bold: true, width: widths[i] })));
-  const rows = dataRows.map(row => docxTableRow(row.map((text, i) => docxTableCell(text, { width: widths[i] }))));
-  return `<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/>${borders}</w:tblPr><w:tblGrid>${gridCols}</w:tblGrid>${headerRow}${rows.join('')}</w:tbl>`;
-}
-
-function homeworkStatusLabel(st){
-  if(st === 'completed' || st === 'perfect') return 'Completed';
-  if(st === 'submitted') return 'Submitted but to clear corrections';
-  return 'Not submitted';
-}
-
-function buildStudentReportXml(student, c, pageBreakBefore){
-  const colWidths = [1800, 3600, 3200];
-  const dataRows = c.homeworks.map(hw => {
-    const st = (c.statuses[student.id] && c.statuses[student.id][hw.id]) || '';
-    return [hw.date || '', hw.name, homeworkStatusLabel(st)];
-  });
-
-  const parts = [];
-  parts.push(docxParagraph('Homework Status Report', { bold: true, size: 36, pageBreakBefore }));
-  parts.push(docxParagraph(`Student: ${student.name}`, { bold: true }));
-  parts.push(docxParagraph(`Class: ${c.name}`));
-  parts.push(docxParagraph(`Date generated: ${new Date().toLocaleDateString()}`));
-  parts.push(docxParagraph(''));
-  if(dataRows.length){
-    parts.push(docxTable(['Date', 'Homework', 'Status'], dataRows, colWidths));
-  } else {
-    parts.push(docxParagraph('No homework recorded yet for this class.'));
+async function generateWordReport(stuIds){
+  const c=getClass();if(!c||!c.homeworks.length){alert('No homework columns.');return;}
+  const visible=c.homeworks.filter(h=>!h.hidden);
+  const paragraphs=[];
+  for(let si=0;si<stuIds.length;si++){
+    const stuId=stuIds[si];const s=c.students.find(st=>st.id===stuId);if(!s)continue;
+    if(si>0)paragraphs.push(pageBreak());
+    paragraphs.push(dp('Homework Status Report',{bold:true,size:32}));
+    paragraphs.push(dp(`Student: ${s.name}`,{bold:true}));
+    paragraphs.push(dp(`Class: ${c.name}`));
+    paragraphs.push(dp(`Date: ${new Date().toLocaleDateString()}`));
+    paragraphs.push(dp(''));
+    const hdrs=['Homework','Date','Status'];
+    const rows=visible.map(hw=>{
+      const st=(c.statuses[stuId]&&c.statuses[stuId][hw.id])||'';
+      const label=st?st.charAt(0).toUpperCase()+st.slice(1):'Not submitted';
+      return[hw.name,hw.date||'',label];
+    });
+    paragraphs.push(dtable(hdrs,rows,[4000,1200,1800]));
+    paragraphs.push(dp(''));
+    const completed=visible.filter(hw=>{const st=(c.statuses[stuId]&&c.statuses[stuId][hw.id])||'';return st==='completed'||st==='perfect';});
+    const incomplete=visible.filter(hw=>{const st=(c.statuses[stuId]&&c.statuses[stuId][hw.id])||'';return !st;});
+    paragraphs.push(dp('Completed',{bold:true}));
+    if(completed.length)completed.forEach(hw=>paragraphs.push(dp(`• ${hw.name} (${hw.date||''})${(c.statuses[stuId]&&c.statuses[stuId][hw.id])==='perfect'?' — Perfect':' — Completed'}`)));
+    else paragraphs.push(dp('None recorded.'));
+    paragraphs.push(dp(''));
+    paragraphs.push(dp('Incomplete / Not submitted',{bold:true}));
+    if(incomplete.length)incomplete.forEach(hw=>paragraphs.push(dp(`• ${hw.name} (${hw.date||''})`)));
+    else paragraphs.push(dp('None — all homework accounted for.'));
+    // Signature
+    paragraphs.push(dp(''));
+    paragraphs.push(`<w:tbl><w:tblPr><w:tblW w:w="9638" w:type="dxa"/><w:tblLayout w:type="fixed"/>
+      <w:tblBorders><w:top w:val="none"/><w:left w:val="none"/><w:bottom w:val="none"/><w:right w:val="none"/><w:insideH w:val="none"/><w:insideV w:val="none"/></w:tblBorders></w:tblPr>
+      <w:tblGrid><w:gridCol w:w="1400"/><w:gridCol w:w="8238"/></w:tblGrid>
+      <w:tr><w:trPr><w:cantSplit/></w:trPr>
+        <w:tc><w:tcPr><w:tcW w:w="9638" w:type="dxa"/><w:gridSpan w:val="2"/>
+          <w:tcBorders><w:top w:val="none"/><w:left w:val="none"/><w:bottom w:val="none"/><w:right w:val="none"/></w:tcBorders></w:tcPr>
+          <w:p><w:r><w:rPr><w:b/><w:sz w:val="20"/></w:rPr><w:t>Parent / Guardian Acknowledgement</w:t></w:r></w:p></w:tc></w:tr>
+      <w:tr><w:trPr><w:cantSplit/></w:trPr>
+        <w:tc><w:tcPr><w:tcW w:w="1400" w:type="dxa"/>
+          <w:tcBorders><w:top w:val="none"/><w:left w:val="none"/><w:bottom w:val="single" w:sz="8" w:color="000000"/><w:right w:val="none"/></w:tcBorders></w:tcPr>
+          <w:p><w:pPr><w:spacing w:before="400" w:after="0"/></w:pPr><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>Signature:</w:t></w:r></w:p></w:tc>
+        <w:tc><w:tcPr><w:tcW w:w="8238" w:type="dxa"/>
+          <w:tcBorders><w:top w:val="none"/><w:left w:val="none"/><w:bottom w:val="single" w:sz="8" w:color="000000"/><w:right w:val="none"/></w:tcBorders></w:tcPr>
+          <w:p><w:pPr><w:spacing w:before="400" w:after="0"/></w:pPr><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve"> </w:t></w:r></w:p></w:tc></w:tr>
+      <w:tr><w:trPr><w:cantSplit/></w:trPr>
+        <w:tc><w:tcPr><w:tcW w:w="1400" w:type="dxa"/>
+          <w:tcBorders><w:top w:val="none"/><w:left w:val="none"/><w:bottom w:val="single" w:sz="8" w:color="000000"/><w:right w:val="none"/></w:tcBorders></w:tcPr>
+          <w:p><w:pPr><w:spacing w:before="400" w:after="0"/></w:pPr><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>Date:</w:t></w:r></w:p></w:tc>
+        <w:tc><w:tcPr><w:tcW w:w="8238" w:type="dxa"/>
+          <w:tcBorders><w:top w:val="none"/><w:left w:val="none"/><w:bottom w:val="single" w:sz="8" w:color="000000"/><w:right w:val="none"/></w:tcBorders></w:tcPr>
+          <w:p><w:pPr><w:spacing w:before="400" w:after="0"/></w:pPr><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve"> </w:t></w:r></w:p></w:tc></w:tr>
+    </w:tbl>`);
   }
-  return parts.join('\n');
-}
-
-async function packageDocx(bodyXml, filename){
-  const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-<w:body>
-${bodyXml}
-<w:sectPr/>
-</w:body>
-</w:document>`;
-
-  const contentTypesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+  const ctXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
 <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
 <Default Extension="xml" ContentType="application/xml"/>
 <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
 </Types>`;
-
-  const relsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+  const relsXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
 <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
 </Relationships>`;
-
-  const zip = new JSZip();
-  zip.file('[Content_Types].xml', contentTypesXml);
-  zip.folder('_rels').file('.rels', relsXml);
-  zip.folder('word').file('document.xml', documentXml);
-
-  const blob = await zip.generateAsync({
-    type: 'blob',
-    mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-  });
-
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  const docXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+<w:body>${paragraphs.join('\n')}<w:sectPr><w:pgMar w:top="720" w:right="1440" w:bottom="720" w:left="1440"/></w:sectPr></w:body>
+</w:document>`;
+  const zip=new JSZip();
+  zip.file('[Content_Types].xml',ctXml);
+  zip.folder('_rels').file('.rels',relsXml);
+  zip.folder('word').file('document.xml',docXml);
+  const blob=await zip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+  const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;
+  const fname=stuIds.length===1?(c.students.find(s=>s.id===stuIds[0])?.name||'student').replace(/[^a-z0-9]/gi,'_'):c.name.replace(/[^a-z0-9]/gi,'_')+'_all';
+  a.download=`${fname}_homework_report.docx`;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
 }
 
-async function generateWordReport(){
-  const c = getActiveClass();
-  const sel = document.getElementById('reportStudentSelect');
-  const stuId = sel.value;
-  const student = c.students.find(s => s.id === stuId);
-  if(!student) return;
-
-  const bodyXml = buildStudentReportXml(student, c, false);
-  await packageDocx(bodyXml, `${student.name.replace(/[^a-z0-9]/gi,'_')}_homework_report.docx`);
-}
-
-async function generateAllReports(){
-  const c = getActiveClass();
-  if(!c.students.length){ alert('No students in this class yet.'); return; }
-
-  const bodyXml = c.students
-    .map((student, i) => buildStudentReportXml(student, c, i > 0))
-    .join('\n');
-
-  await packageDocx(bodyXml, `${c.name.replace(/[^a-z0-9]/gi,'_')}_all_students_homework_report.docx`);
-}
-
-document.getElementById('addClassBtn').onclick = () => {
-  const input = document.getElementById('newClassName');
-  addClass(input.value);
-  input.value = '';
-};
-document.getElementById('newClassName').addEventListener('keydown', e => {
-  if(e.key === 'Enter'){ addClass(e.target.value); e.target.value=''; }
-});
-
+// ── INIT ─────────────────────────────────────────────────────────────────────
+document.getElementById('addClassBtn').onclick=()=>{const i=document.getElementById('newClassName');addClass(i.value);i.value='';};
+document.getElementById('newClassName').addEventListener('keydown',e=>{if(e.key==='Enter'){addClass(e.target.value);e.target.value='';}});
 renderAll();
-initSyncFromSavedConfig();
+initSync();
 </script>
 </body>
 </html>
