@@ -347,8 +347,8 @@ function renderContent(){
   document.getElementById('newStuName').addEventListener('keydown',e=>{if(e.key==='Enter'){addStudent(e.target.value);e.target.value='';}});
   document.getElementById('addHwBtn').onclick=()=>{const n=document.getElementById('newHwName'),d=document.getElementById('newHwDate');addHomework(n.value,d.value);n.value='';};
   document.getElementById('unhideBtn').onclick=showUnhidePanel;
-  document.getElementById('genOneBtn').onclick=()=>{const s=document.getElementById('reportStuSel');if(!s.value){alert('Select a student.');return;}generateWordReport([s.value]);};
-  document.getElementById('genAllBtn').onclick=()=>{const c=getClass();if(!c||!c.students.length){alert('No students.');return;}generateWordReport(c.students.map(s=>s.id));};
+  document.getElementById('genOneBtn').onclick=()=>{const s=document.getElementById('reportStuSel');if(!s.value){alert('Select a student.');return;}showReportOptions([s.value]);};
+  document.getElementById('genAllBtn').onclick=()=>{const c=getClass();if(!c||!c.students.length){alert('No students.');return;}showReportOptions(c.students.map(s=>s.id));};
   document.getElementById('excelBtn').onclick=exportExcel;
   renderTable();renderReportSel();
 }
@@ -469,36 +469,92 @@ function dtable(headers,rows,colWidths){
     ${rows.map(r=>`<w:tr>${r.map((c,i)=>cell(c,false,cw[i])).join('')}</w:tr>`).join('')}</w:tbl>`;
 }
 
-async function generateWordReport(stuIds){
+// ── REPORT SELECTION POPUP ───────────────────────────────────────────────────
+function showReportOptions(stuIds){
   const c=getClass();if(!c||!c.homeworks.length){alert('No homework columns.');return;}
   const visible=c.homeworks.filter(h=>!h.hidden);
+  const boxes=visible.map(hw=>`<div style="margin-bottom:6px;"><label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" id="hwchk_${hw.id}" checked style="width:16px;height:16px;"> <span>${esc(hw.name)} <span style="color:var(--pending);font-size:11px;">(${hw.date||''})</span></span></label></div>`).join('');
+  showModal(`<h3>Select homework to include</h3>
+    <div class="btn-row" style="margin-bottom:10px;">
+      <button class="btn-ghost" onclick="selAllHw(true)">Select all</button>
+      <button class="btn-ghost" onclick="selAllHw(false)">Deselect all</button>
+    </div>
+    <div style="margin:8px 0;max-height:300px;overflow-y:auto;">${boxes}</div>
+    <div class="btn-row" style="margin-top:12px;">
+      <button class="btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn-main" onclick="doGenReport(${JSON.stringify(stuIds).replace(/"/g,'&quot;')})">Generate Report</button>
+    </div>`);
+}
+function selAllHw(sel){
+  const c=getClass();if(!c)return;
+  c.homeworks.filter(h=>!h.hidden).forEach(hw=>{const el=document.getElementById('hwchk_'+hw.id);if(el)el.checked=sel;});
+}
+function doGenReport(stuIds){
+  const c=getClass();if(!c)return;
+  const selIds=c.homeworks.filter(h=>!h.hidden&&document.getElementById('hwchk_'+h.id)?.checked).map(h=>h.id);
+  if(!selIds.length){alert('Please select at least one homework.');return;}
+  closeModal();
+  generateWordReport(stuIds,selIds);
+}
+
+// ── WORD REPORT ───────────────────────────────────────────────────────────────
+const RED='C00000';
+function colorRun(text,color,bold){
+  const rpr=`<w:rPr>${bold?'<w:b/>':''}${color?`<w:color w:val="${color}"/>`:''}  <w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr>`;
+  return`<w:r>${rpr}<w:t xml:space="preserve">${escX(text)}</w:t></w:r>`;
+}
+function mixedPara(runs,spacing){
+  const sp=spacing||'<w:spacing w:before="0" w:after="100"/>';
+  return`<w:p><w:pPr>${sp}</w:pPr>${runs}</w:p>`;
+}
+function mixedCell(runs,colW,bold){
+  const wXml=colW?`<w:tcW w:w="${colW}" w:type="dxa"/>`:'';
+  const pPr=bold
+    ?`<w:pPr><w:spacing w:before="0" w:after="60"/><w:rPr><w:b/></w:rPr></w:pPr>`
+    :`<w:pPr><w:spacing w:before="0" w:after="60"/></w:pPr>`;
+  return`<w:tc><w:tcPr>${wXml}<w:tcBorders>
+    <w:top w:val="single" w:sz="4" w:color="000000"/>
+    <w:left w:val="single" w:sz="4" w:color="000000"/>
+    <w:bottom w:val="single" w:sz="4" w:color="000000"/>
+    <w:right w:val="single" w:sz="4" w:color="000000"/>
+  </w:tcBorders></w:tcPr><w:p>${pPr}${runs}</w:p></w:tc>`;
+}
+function statusRuns(st){
+  if(st==='submitted') return colorRun('Submitted ',null,false)+colorRun('(corrections not cleared)',RED,false);
+  if(st==='perfect')   return colorRun('Perfect',null,false);
+  if(st==='completed') return colorRun('Completed (corrections cleared)',RED,false);
+  return colorRun('Not submitted',null,false);
+}
+
+async function generateWordReport(stuIds,selectedHwIds){
+  const c=getClass();if(!c){alert('No class selected.');return;}
+  const hwList=c.homeworks.filter(h=>selectedHwIds.includes(h.id));
+  if(!hwList.length){alert('No homework selected.');return;}
   const paragraphs=[];
   for(let si=0;si<stuIds.length;si++){
     const stuId=stuIds[si];const s=c.students.find(st=>st.id===stuId);if(!s)continue;
     if(si>0)paragraphs.push(pageBreak());
-    paragraphs.push(dp('Homework Status Report',{bold:true,size:32}));
-    paragraphs.push(dp(`Student: ${s.name}`,{bold:true}));
-    paragraphs.push(dp(`Class: ${c.name}`));
-    paragraphs.push(dp(`Date: ${new Date().toLocaleDateString()}`));
-    paragraphs.push(dp(''));
-    const hdrs=['Homework','Date','Status'];
-    const rows=visible.map(hw=>{
+    // Title
+    paragraphs.push(`<w:p><w:pPr><w:spacing w:before="0" w:after="120"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="32"/></w:rPr><w:t>Homework Status Report</w:t></w:r></w:p>`);
+    paragraphs.push(`<w:p><w:pPr><w:spacing w:before="0" w:after="80"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Student: ${escX(s.name)}</w:t></w:r></w:p>`);
+    paragraphs.push(`<w:p><w:pPr><w:spacing w:before="0" w:after="80"/></w:pPr><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">Class: ${escX(c.name)}</w:t></w:r></w:p>`);
+    // Date reported — "reported:" in red
+    paragraphs.push(`<w:p><w:pPr><w:spacing w:before="0" w:after="160"/></w:pPr>
+      <w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">Date </w:t></w:r>
+      <w:r><w:rPr><w:sz w:val="20"/><w:color w:val="${RED}"/></w:rPr><w:t xml:space="preserve">reported: </w:t></w:r>
+      <w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>${escX(new Date().toLocaleDateString())}</w:t></w:r></w:p>`);
+    // "Homework assigned" in red bold
+    paragraphs.push(`<w:p><w:pPr><w:spacing w:before="0" w:after="120"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="24"/><w:color w:val="${RED}"/></w:rPr><w:t>Homework assigned</w:t></w:r></w:p>`);
+    // Table
+    const totalW=7000;const cw=[3800,1200,2000];
+    const tblGrid=`<w:tblGrid>${cw.map(w=>`<w:gridCol w:w="${w}"/>`).join('')}</w:tblGrid>`;
+    const headerRow=`<w:tr>${mixedCell(colorRun('Homework',null,true),cw[0],true)}${mixedCell(colorRun('Date',null,true),cw[1],true)}${mixedCell(colorRun('Status',null,true),cw[2],true)}</w:tr>`;
+    const dataRows=hwList.map(hw=>{
       const st=(c.statuses[stuId]&&c.statuses[stuId][hw.id])||'';
-      const label=st?st.charAt(0).toUpperCase()+st.slice(1):'Not submitted';
-      return[hw.name,hw.date||'',label];
-    });
-    paragraphs.push(dtable(hdrs,rows,[4000,1200,1800]));
-    paragraphs.push(dp(''));
-    const completed=visible.filter(hw=>{const st=(c.statuses[stuId]&&c.statuses[stuId][hw.id])||'';return st==='completed'||st==='perfect';});
-    const incomplete=visible.filter(hw=>{const st=(c.statuses[stuId]&&c.statuses[stuId][hw.id])||'';return !st;});
-    paragraphs.push(dp('Completed',{bold:true}));
-    if(completed.length)completed.forEach(hw=>paragraphs.push(dp(`• ${hw.name} (${hw.date||''})${(c.statuses[stuId]&&c.statuses[stuId][hw.id])==='perfect'?' — Perfect':' — Completed'}`)));
-    else paragraphs.push(dp('None recorded.'));
-    paragraphs.push(dp(''));
-    paragraphs.push(dp('Incomplete / Not submitted',{bold:true}));
-    if(incomplete.length)incomplete.forEach(hw=>paragraphs.push(dp(`• ${hw.name} (${hw.date||''})`)));
-    else paragraphs.push(dp('None — all homework accounted for.'));
-    // Signature
+      return`<w:tr>${mixedCell(colorRun(hw.name,null,false),cw[0],false)}${mixedCell(colorRun(hw.date||'',null,false),cw[1],false)}${mixedCell(statusRuns(st),cw[2],false)}</w:tr>`;
+    }).join('');
+    paragraphs.push(`<w:tbl><w:tblPr><w:tblW w:w="${totalW}" w:type="dxa"/><w:tblLayout w:type="fixed"/></w:tblPr>${tblGrid}${headerRow}${dataRows}</w:tbl>`);
+    // Signature block
     paragraphs.push(dp(''));
     paragraphs.push(`<w:tbl><w:tblPr><w:tblW w:w="9638" w:type="dxa"/><w:tblLayout w:type="fixed"/>
       <w:tblBorders><w:top w:val="none"/><w:left w:val="none"/><w:bottom w:val="none"/><w:right w:val="none"/><w:insideH w:val="none"/><w:insideV w:val="none"/></w:tblBorders></w:tblPr>
