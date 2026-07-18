@@ -65,7 +65,6 @@ td.st-empty{background:white;}
 .pill-dropdown button:hover{background:var(--pending-bg);}
 footer{margin-top:auto;text-align:center;font-size:11px;color:var(--pending);padding:18px;}
 .empty-state{text-align:center;color:var(--pending);font-size:13px;padding:30px 10px;}
-/* Student selection pills for report */
 .stu-pill{display:inline-block;padding:7px 14px;border-radius:999px;border:2px solid var(--line);background:white;font-size:13px;font-weight:600;cursor:pointer;margin:4px;}
 .stu-pill.sel{background:#a8d5ba;border-color:#2e7d50;}
 .hw-check{display:flex;align-items:center;gap:10px;padding:6px 8px;border-bottom:1px solid var(--line);cursor:pointer;}
@@ -605,27 +604,31 @@ function generateReportFromState(){
 
 // ── WORD REPORT ───────────────────────────────────────────────────────────────
 const RED='C00000';
+
 function colorRun(text,color,bold){
   const rpr=`<w:rPr>${bold?'<w:b/>':''}${color?`<w:color w:val="${color}"/>`:''}<w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr>`;
   return`<w:r>${rpr}<w:t xml:space="preserve">${escX(text)}</w:t></w:r>`;
 }
-function mixedCell(runs,colW,bold){
+function mixedCell(runs,colW,bold,align){
   const wXml=colW?`<w:tcW w:w="${colW}" w:type="dxa"/>`:'';
-  const pPr=bold
-    ?`<w:pPr><w:spacing w:before="0" w:after="60"/><w:rPr><w:b/></w:rPr></w:pPr>`
-    :`<w:pPr><w:spacing w:before="0" w:after="60"/></w:pPr>`;
-  return`<w:tc><w:tcPr>${wXml}<w:tcBorders>
+  const alignProp = align ? `<w:jc w:val="${align}"/>` : '';
+  const pPr = `<w:pPr><w:spacing w:before="0" w:after="60"/>${alignProp}<w:rPr>${bold?'<w:b/>':''}</w:rPr></w:pPr>`;
+  // add left margin of 100 twips (approx one character) to all cells
+  const margin = `<w:tcMar><w:left w:w="100" w:type="dxa"/><w:right w:w="100" w:type="dxa"/></w:tcMar>`;
+  return`<w:tc><w:tcPr>${wXml}${margin}<w:tcBorders>
     <w:top w:val="single" w:sz="4" w:color="000000"/>
     <w:left w:val="single" w:sz="4" w:color="000000"/>
     <w:bottom w:val="single" w:sz="4" w:color="000000"/>
     <w:right w:val="single" w:sz="4" w:color="000000"/>
   </w:tcBorders></w:tcPr><w:p>${pPr}${runs}</w:p></w:tc>`;
 }
+
 function statusRuns(st){
-  if(st==='submitted') return colorRun('Submitted ',null,false)+colorRun('(corrections not cleared)',RED,false);
-  if(st==='perfect')   return colorRun('Perfect',null,false);
-  if(st==='completed') return colorRun('Completed (corrections cleared)',RED,false);
-  return colorRun('Not submitted',null,false);
+  // Updated colours per user request
+  if(st==='submitted') return colorRun('Submitted (corrections not cleared)', RED, false);
+  if(st==='perfect')   return colorRun('Perfect', null, false); // black
+  if(st==='completed') return colorRun('Completed (corrections cleared)', null, false); // black
+  return colorRun('Not submitted', RED, false);
 }
 
 async function generateWordReport(stuIds, selectedHwIds){
@@ -640,20 +643,20 @@ async function generateWordReport(stuIds, selectedHwIds){
     paragraphs.push(`<w:p><w:pPr><w:spacing w:before="0" w:after="120"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="32"/></w:rPr><w:t>Homework Status Report</w:t></w:r></w:p>`);
     paragraphs.push(`<w:p><w:pPr><w:spacing w:before="0" w:after="80"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Student: ${escX(s.name)}</w:t></w:r></w:p>`);
     paragraphs.push(`<w:p><w:pPr><w:spacing w:before="0" w:after="80"/></w:pPr><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">Class: ${escX(c.name)}</w:t></w:r></w:p>`);
-    // Date reported
+    // Date reported – all black
     paragraphs.push(`<w:p><w:pPr><w:spacing w:before="0" w:after="160"/></w:pPr>
-      <w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">Date </w:t></w:r>
-      <w:r><w:rPr><w:sz w:val="20"/><w:color w:val="${RED}"/></w:rPr><w:t xml:space="preserve">reported: </w:t></w:r>
+      <w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">Date reported: </w:t></w:r>
       <w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>${escX(new Date().toLocaleDateString())}</w:t></w:r></w:p>`);
-    // "Homework assigned" in red bold
-    paragraphs.push(`<w:p><w:pPr><w:spacing w:before="0" w:after="120"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="24"/><w:color w:val="${RED}"/></w:rPr><w:t>Homework assigned</w:t></w:r></w:p>`);
+    // "Homework assigned" – black
+    paragraphs.push(`<w:p><w:pPr><w:spacing w:before="0" w:after="120"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="24"/></w:rPr><w:t>Homework assigned</w:t></w:r></w:p>`);
     // Table
     const totalW=7000;const cw=[3800,1200,2000];
     const tblGrid=`<w:tblGrid>${cw.map(w=>`<w:gridCol w:w="${w}"/>`).join('')}</w:tblGrid>`;
-    const headerRow=`<w:tr>${mixedCell(colorRun('Homework',null,true),cw[0],true)}${mixedCell(colorRun('Date',null,true),cw[1],true)}${mixedCell(colorRun('Status',null,true),cw[2],true)}</w:tr>`;
+    // Headers – centrally aligned
+    const headerRow=`<w:tr>${mixedCell(colorRun('Homework',null,true),cw[0],true,'center')}${mixedCell(colorRun('Date',null,true),cw[1],true,'center')}${mixedCell(colorRun('Status',null,true),cw[2],true,'center')}</w:tr>`;
     const dataRows=hwList.map(hw=>{
       const st=(c.statuses[stuId]&&c.statuses[stuId][hw.id])||'';
-      return`<w:tr>${mixedCell(colorRun(hw.name,null,false),cw[0],false)}${mixedCell(colorRun(hw.date||'',null,false),cw[1],false)}${mixedCell(statusRuns(st),cw[2],false)}</w:tr>`;
+      return`<w:tr>${mixedCell(colorRun(hw.name,null,false),cw[0],false,'left')}${mixedCell(colorRun(hw.date||'',null,false),cw[1],false,'center')}${mixedCell(statusRuns(st),cw[2],false,'left')}</w:tr>`;
     }).join('');
     paragraphs.push(`<w:tbl><w:tblPr><w:tblW w:w="${totalW}" w:type="dxa"/><w:tblLayout w:type="fixed"/></w:tblPr>${tblGrid}${headerRow}${dataRows}</w:tbl>`);
     // Signature block
