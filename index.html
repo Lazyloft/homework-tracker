@@ -11,10 +11,9 @@
   --ink:#1f2a24;--paper:#faf7f0;--line:#d9d2c2;--accent:#c9622f;
   --pending:#8a8170;--pending-bg:#eee9dd;--done:#3d7a5c;--done-bg:#e3f0e8;
   --perfect:#3563a8;--perfect-bg:#e3eaf6;--missing:#b85c3a;--missing-bg:#fbe7df;
-  /* pill/cell colours */
-  --sub-color:#c94f7a;--sub-bg:#ffd6e4;       /* submitted = pink */
-  --comp-color:#2a6e8a;--comp-bg:#cce8f4;      /* completed = light blue */
-  --perf-color:#2e7d50;--perf-bg:#c8f0d8;      /* perfect = green */
+  --sub-color:#c94f7a;--sub-bg:#ffd6e4;
+  --comp-color:#2a6e8a;--comp-bg:#cce8f4;
+  --perf-color:#2e7d50;--perf-bg:#c8f0d8;
 }
 *{box-sizing:border-box;}
 body{margin:0;background:var(--paper);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-tap-highlight-color:transparent;}
@@ -38,7 +37,6 @@ button{border:none;cursor:pointer;font-family:inherit;font-weight:700;border-rad
 .btn-ghost{background:var(--pending-bg);color:var(--ink);}
 .btn-active{background:var(--perfect);color:white;}
 .btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;}
-/* TABLE */
 .table-scroll{overflow-x:auto;border-radius:10px;border:1px solid var(--line);}
 table{border-collapse:collapse;width:100%;font-size:12px;}
 th,td{border:1px solid var(--line);padding:5px 7px;text-align:center;white-space:nowrap;}
@@ -51,13 +49,11 @@ td.st-perfect{background:var(--perf-bg);color:var(--perf-color);font-weight:700;
 td.st-completed{background:var(--comp-bg);color:var(--comp-color);font-weight:700;}
 td.st-empty{background:white;}
 .del-btn{background:none;color:var(--pending);font-size:13px;padding:1px 4px;border-radius:4px;border:none;cursor:pointer;}
-/* MODAL */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:50;padding:12px;}
 .modal-overlay.show{display:flex;}
-.modal{background:white;border-radius:14px;padding:16px;max-width:460px;width:100%;max-height:90vh;overflow-y:auto;}
+.modal{background:white;border-radius:14px;padding:16px;max-width:560px;width:100%;max-height:90vh;overflow-y:auto;}
 .modal h3{margin:0 0 8px;font-size:16px;}
 .modal p{font-size:13px;color:var(--pending);margin:0 0 10px;}
-/* PILLS */
 .pill-grid{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0;}
 .pill{position:relative;border:2px solid var(--line);border-radius:999px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;min-width:90px;text-align:center;}
 .pill.pill-empty{background:white;color:var(--ink);border-color:var(--line);}
@@ -69,6 +65,14 @@ td.st-empty{background:white;}
 .pill-dropdown button:hover{background:var(--pending-bg);}
 footer{margin-top:auto;text-align:center;font-size:11px;color:var(--pending);padding:18px;}
 .empty-state{text-align:center;color:var(--pending);font-size:13px;padding:30px 10px;}
+/* Student selection pills for report */
+.stu-pill{display:inline-block;padding:7px 14px;border-radius:999px;border:2px solid var(--line);background:white;font-size:13px;font-weight:600;cursor:pointer;margin:4px;}
+.stu-pill.sel{background:#a8d5ba;border-color:#2e7d50;}
+.hw-check{display:flex;align-items:center;gap:10px;padding:6px 8px;border-bottom:1px solid var(--line);cursor:pointer;}
+.hw-check:hover{background:var(--pending-bg);}
+.hw-check input[type=checkbox]{width:18px;height:18px;cursor:pointer;}
+.hw-check label{flex:1;cursor:pointer;font-size:13px;}
+.report-summary{font-size:13px;color:var(--pending);margin:6px 0;}
 </style>
 </head>
 <body>
@@ -79,6 +83,8 @@ footer{margin-top:auto;text-align:center;font-size:11px;color:var(--pending);pad
     <div class="btn-row">
       <button class="btn-ghost" id="syncStatusBtn" onclick="showSyncPanel()">☁️ Sync: Off</button>
       <button class="btn-ghost" id="deleteClassBtn" style="display:none" onclick="deleteActiveClass()">🗑 Delete class</button>
+      <button class="btn-ghost" onclick="exportData()">💾 Export</button>
+      <button class="btn-ghost" onclick="importData()">📂 Import</button>
     </div>
     <div class="class-row" id="classRow"></div>
     <div class="add-class">
@@ -99,10 +105,11 @@ let activeClassId=state.classOrder[0]||null;
 
 function loadState(){
   try{const r=localStorage.getItem(STORAGE_KEY);if(r){const p=JSON.parse(r);if(p&&p.classOrder)return p;}}catch(e){}
-  return{classOrder:[],classes:{}};
+  return{classOrder:[], classes:{}, _updatedAt: Date.now()};
 }
 let saveTimer=null;
 function saveState(){
+  state._updatedAt = Date.now();
   localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
   if(syncToken&&syncGistId){clearTimeout(saveTimer);saveTimer=setTimeout(pushToCloud,800);}
 }
@@ -114,13 +121,11 @@ function escX(s){return String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&
 function showModal(html){document.getElementById('modalBody').innerHTML=html;document.getElementById('modalOverlay').classList.add('show');}
 function closeModal(){document.getElementById('modalOverlay').classList.remove('show');}
 
-// ── SYNC (GitHub Gist) ────────────────────────────────────────────────────────
+// ── SYNC ──────────────────────────────────────────────────────────────────────
 let syncToken='',syncGistId='',pollHandle=null,applyingRemote=false,lastRemoteJson=null;
-
 function loadSyncCfg(){try{const r=localStorage.getItem(SYNC_CFG_KEY);if(r)return JSON.parse(r);}catch(e){}return null;}
 function saveSyncCfg(c){localStorage.setItem(SYNC_CFG_KEY,JSON.stringify(c));}
 function initSync(){const c=loadSyncCfg();if(c&&c.token&&c.gistId)connectSync(c.token,c.gistId,true);}
-
 async function connectSync(token,gistId,silent){
   syncToken=token.trim();gistId=(gistId||'').trim();
   try{
@@ -143,7 +148,6 @@ async function connectSync(token,gistId,silent){
     if(!silent)alert('Could not connect.\n\n'+err.message+'\n\nCheck your token and Gist ID.');
   }
 }
-
 async function pollOnce(){
   if(!syncToken||!syncGistId)return;
   try{
@@ -156,18 +160,20 @@ async function pollOnce(){
     const remoteJson=record&&record.json;if(!remoteJson)return;
     if(remoteJson===lastRemoteJson)return;
     const remoteState=JSON.parse(remoteJson);
-    // Don't overwrite local non-empty data with empty remote
-    if(remoteState.classOrder.length===0&&state.classOrder.length>0){
-      lastRemoteJson=remoteJson;pushToCloud();return;
+    // Compare timestamps
+    const localTime = state._updatedAt || 0;
+    const remoteTime = remoteState._updatedAt || 0;
+    if(remoteTime > localTime){
+      lastRemoteJson=remoteJson;applyingRemote=true;
+      state=remoteState;
+      if(!state.classOrder.includes(activeClassId))activeClassId=state.classOrder[0]||null;
+      localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
+      renderAll();applyingRemote=false;
+    } else if(Object.keys(state.classes).length>0){
+      lastRemoteJson=remoteJson;pushToCloud();
     }
-    lastRemoteJson=remoteJson;applyingRemote=true;
-    state=remoteState;
-    if(!state.classOrder.includes(activeClassId))activeClassId=state.classOrder[0]||null;
-    localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
-    renderAll();applyingRemote=false;
   }catch(e){console.warn('Poll failed',e);}
 }
-
 async function pushToCloud(){
   if(!syncToken||!syncGistId||applyingRemote)return;
   const json=JSON.stringify(state);lastRemoteJson=json;
@@ -177,9 +183,7 @@ async function pushToCloud(){
       body:JSON.stringify({files:{'homeworkTracker.json':{content:JSON.stringify({json,updatedAt:Date.now()})}}})});
   }catch(e){console.warn('Push failed',e);}
 }
-
 function updateSyncBtn(on){const b=document.getElementById('syncStatusBtn');if(b)b.textContent=on?'☁️ Sync: On':'☁️ Sync: Off';}
-
 function showSyncPanel(){
   const c=loadSyncCfg()||{};
   showModal(`<h3>☁️ Sync between devices</h3>
@@ -196,8 +200,49 @@ function onConnectSync(){
   connectSync(t,g,false);
 }
 
+// ── BACKUP / RESTORE ──────────────────────────────────────────────────────────
+function exportData(){
+  const blob = new Blob([JSON.stringify(state,null,2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `homework_backup_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+function importData(){
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'application/json';
+  input.onchange = (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev)=>{
+      try{
+        const data = JSON.parse(ev.target.result);
+        if(data.classOrder && data.classes){
+          if(confirm('This will replace ALL current data. Continue?')){
+            state = data;
+            state._updatedAt = Date.now();
+            localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
+            if(!state.classOrder.includes(activeClassId)) activeClassId = state.classOrder[0]||null;
+            renderAll();
+            alert('Data imported successfully.');
+          }
+        } else {
+          alert('Invalid file format.');
+        }
+      }catch(err){ alert('Error reading file: '+err.message); }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
 // ── CLASS MANAGEMENT ──────────────────────────────────────────────────────────
 function getClass(){return activeClassId?state.classes[activeClassId]:null;}
+function getVisibleHomeworks(){const c=getClass();return c?c.homeworks.filter(h=>!h.hidden):[];}
 
 function renderClassRow(){
   const row=document.getElementById('classRow');row.innerHTML='';
@@ -334,12 +379,11 @@ function renderContent(){
     <div class="panel">
       <h2>Reports & Export</h2>
       <div class="row-f">
-        <select id="reportStuSel"></select>
-        <button class="btn-ghost" id="genOneBtn">Word report (1 student)</button>
+        <button class="btn-main" onclick="showAllStudentsReport()">📄 All Students</button>
+        <button class="btn-main" onclick="showSelectedStudentsReport()">📄 Selected Students</button>
       </div>
-      <div class="row-f">
-        <button class="btn-main" id="genAllBtn">Word report (all students)</button>
-        <button class="btn-ghost" id="excelBtn">Export to Excel</button>
+      <div class="row-f" style="margin-top:8px;">
+        <button class="btn-ghost" id="excelBtn">📊 Export to Excel</button>
       </div>
     </div>`;
   document.getElementById('newHwDate').value=new Date().toISOString().slice(0,10);
@@ -347,17 +391,11 @@ function renderContent(){
   document.getElementById('newStuName').addEventListener('keydown',e=>{if(e.key==='Enter'){addStudent(e.target.value);e.target.value='';}});
   document.getElementById('addHwBtn').onclick=()=>{const n=document.getElementById('newHwName'),d=document.getElementById('newHwDate');addHomework(n.value,d.value);n.value='';};
   document.getElementById('unhideBtn').onclick=showUnhidePanel;
-  document.getElementById('genOneBtn').onclick=()=>{const s=document.getElementById('reportStuSel');if(!s.value){alert('Select a student.');return;}showReportOptions([s.value]);};
-  document.getElementById('genAllBtn').onclick=()=>{const c=getClass();if(!c||!c.students.length){alert('No students.');return;}showReportOptions(c.students.map(s=>s.id));};
   document.getElementById('excelBtn').onclick=exportExcel;
   renderTable();renderReportSel();
 }
 
-function renderReportSel(){
-  const sel=document.getElementById('reportStuSel');if(!sel)return;
-  const c=getClass();sel.innerHTML='';
-  (c?c.students:[]).forEach(s=>{const o=document.createElement('option');o.value=s.id;o.textContent=s.name;sel.appendChild(o);});
-}
+function renderReportSel(){ /* kept for compatibility, not used */ }
 
 function statusClass(st){return st?'st-'+st:'st-empty';}
 function statusLabel(st){return{submitted:'Submitted',perfect:'Perfect',completed:'Completed'}[st]||'';}
@@ -415,7 +453,6 @@ function renderOverview(){
 function toggleMass(st){massMode=(massMode===st)?null:st;renderOverview();}
 function onPillClick(stuId){
   if(massMode){setStatus(stuId,ovHwId,massMode);renderOverview();renderTable();return;}
-  // Dropdown
   document.querySelectorAll('.pill-dropdown').forEach(el=>el.remove());
   const pill=document.getElementById('pill_'+stuId);
   const dd=document.createElement('div');dd.className='pill-dropdown';
@@ -442,70 +479,135 @@ function exportExcel(){
   XLSX.writeFile(wb,`${c.name.replace(/[^a-z0-9]/gi,'_')}_homework.xlsx`);
 }
 
-// ── WORD REPORT ───────────────────────────────────────────────────────────────
-function dp(text,opts){
-  opts=opts||{};const rp=[];
-  if(opts.bold)rp.push('<w:b/>');
-  if(opts.size)rp.push(`<w:sz w:val="${opts.size}"/><w:szCs w:val="${opts.size}"/>`);
-  const rPr=rp.length?`<w:rPr>${rp.join('')}</w:rPr>`:'';
-  const pPr=(opts.bold||opts.size)?`<w:pPr><w:rPr>${rp.join('')}</w:rPr></w:pPr>`:'';
-  return`<w:p>${pPr}<w:r>${rPr}<w:t xml:space="preserve">${escX(text)}</w:t></w:r></w:p>`;
-}
-function pageBreak(){return`<w:p><w:r><w:br w:type="page"/></w:r></w:p>`;}
-function dtable(headers,rows,colWidths){
-  const cell=(txt,bold,colW)=>{const wXml=colW?`<w:tcW w:w="${colW}" w:type="dxa"/>`:'';
-    return`<w:tc><w:tcPr>${wXml}<w:tcBorders>
-    <w:top w:val="single" w:sz="4" w:color="000000"/>
-    <w:left w:val="single" w:sz="4" w:color="000000"/>
-    <w:bottom w:val="single" w:sz="4" w:color="000000"/>
-    <w:right w:val="single" w:sz="4" w:color="000000"/>
-  </w:tcBorders></w:tcPr><w:p><w:pPr><w:spacing w:before="0" w:after="60"/></w:pPr>
-  <w:r><w:rPr>${bold?'<w:b/>':''}<w:sz w:val="20"/></w:rPr>
-  <w:t xml:space="preserve">${escX(String(txt))}</w:t></w:r></w:p></w:tc>`;};
-  const cw=colWidths||[];const totalW=cw.reduce((a,b)=>a+b,0)||9000;
-  const tblGrid=cw.length?`<w:tblGrid>${cw.map(w=>`<w:gridCol w:w="${w}"/>`).join('')}</w:tblGrid>`:'';
-  return`<w:tbl><w:tblPr><w:tblW w:w="${totalW}" w:type="dxa"/><w:tblLayout w:type="fixed"/></w:tblPr>${tblGrid}
-    <w:tr>${headers.map((h,i)=>cell(h,true,cw[i])).join('')}</w:tr>
-    ${rows.map(r=>`<w:tr>${r.map((c,i)=>cell(c,false,cw[i])).join('')}</w:tr>`).join('')}</w:tbl>`;
+// ── REPORT SELECTION & GENERATION ────────────────────────────────────────────
+// Global report state
+let reportState = {
+  mode: 'all',        // 'all' or 'selected'
+  students: new Set(),
+  homeworks: new Set()
+};
+
+function showAllStudentsReport(){
+  const c = getClass();
+  if(!c){ alert('No class loaded.'); return; }
+  const visible = c.homeworks.filter(h=>!h.hidden);
+  if(!visible.length){ alert('No visible homework columns to report.'); return; }
+  // Pre-select all students
+  reportState.mode = 'all';
+  reportState.students = new Set(c.students.map(s=>s.id));
+  // Pre-select all visible homework
+  reportState.homeworks = new Set(visible.map(h=>h.id));
+  openHomeworkSelectionModal('all');
 }
 
-// ── REPORT SELECTION POPUP ───────────────────────────────────────────────────
-function showReportOptions(stuIds){
-  const c=getClass();if(!c||!c.homeworks.length){alert('No homework columns.');return;}
-  const visible=c.homeworks.filter(h=>!h.hidden);
-  const boxes=visible.map(hw=>`<div style="margin-bottom:6px;"><label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" id="hwchk_${hw.id}" checked style="width:16px;height:16px;"> <span>${esc(hw.name)} <span style="color:var(--pending);font-size:11px;">(${hw.date||''})</span></span></label></div>`).join('');
-  showModal(`<h3>Select homework to include</h3>
-    <div class="btn-row" style="margin-bottom:10px;">
-      <button class="btn-ghost" onclick="selAllHw(true)">Select all</button>
-      <button class="btn-ghost" onclick="selAllHw(false)">Deselect all</button>
-    </div>
-    <div style="margin:8px 0;max-height:300px;overflow-y:auto;">${boxes}</div>
-    <div class="btn-row" style="margin-top:12px;">
+function showSelectedStudentsReport(){
+  const c = getClass();
+  if(!c){ alert('No class loaded.'); return; }
+  if(!c.students.length){ alert('No students in this class.'); return; }
+  const visible = c.homeworks.filter(h=>!h.hidden);
+  if(!visible.length){ alert('No visible homework columns to report.'); return; }
+  reportState.mode = 'selected';
+  reportState.students = new Set(); // start empty
+  reportState.homeworks = new Set(visible.map(h=>h.id)); // default all visible
+  openStudentSelectionModal();
+}
+
+// Student selection modal
+function openStudentSelectionModal(){
+  const c = getClass(); if(!c) return;
+  const allSelected = c.students.every(s => reportState.students.has(s.id));
+  const hwNames = c.homeworks.filter(h=>reportState.homeworks.has(h.id)).map(h=>h.name).join(', ') || 'None selected';
+  let html = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+    <h3 style="margin:0;">📄 Select Students</h3>
+    <button class="btn-ghost" style="font-size:12px;padding:5px 12px;" onclick="toggleAllStudents()">${allSelected ? 'Deselect All' : 'All'}</button>
+  </div>
+  <div style="margin:6px 0;font-size:13px;color:var(--pending);">Selected homework: ${esc(hwNames)}</div>
+  <div style="margin:6px 0;">
+    <button class="btn-ghost" style="font-size:12px;" onclick="openHomeworkSelectionModal('selected')">📋 Select Homework</button>
+  </div>
+  <div style="max-height:280px;overflow-y:auto;border:1px solid var(--line);border-radius:8px;padding:8px;">`;
+  c.students.forEach(s => {
+    const sel = reportState.students.has(s.id) ? 'sel' : '';
+    html += `<span class="stu-pill ${sel}" onclick="toggleStudent('${s.id}')">${esc(s.name)}</span>`;
+  });
+  html += `</div>
+    <div style="margin-top:12px;">
       <button class="btn-ghost" onclick="closeModal()">Cancel</button>
-      <button class="btn-main" onclick="doGenReport(${JSON.stringify(stuIds).replace(/"/g,'&quot;')})">Generate Report</button>
-    </div>`);
+      <button class="btn-main" onclick="generateReportFromState()" ${reportState.students.size===0?'disabled':''}>Generate Report</button>
+    </div>`;
+  showModal(html);
 }
-function selAllHw(sel){
-  const c=getClass();if(!c)return;
-  c.homeworks.filter(h=>!h.hidden).forEach(hw=>{const el=document.getElementById('hwchk_'+hw.id);if(el)el.checked=sel;});
+
+function toggleStudent(stuId){
+  if(reportState.students.has(stuId)) reportState.students.delete(stuId);
+  else reportState.students.add(stuId);
+  openStudentSelectionModal();
 }
-function doGenReport(stuIds){
-  const c=getClass();if(!c)return;
-  const selIds=c.homeworks.filter(h=>!h.hidden&&document.getElementById('hwchk_'+h.id)?.checked).map(h=>h.id);
-  if(!selIds.length){alert('Please select at least one homework.');return;}
+function toggleAllStudents(){
+  const c = getClass(); if(!c) return;
+  const allSelected = c.students.every(s=>reportState.students.has(s.id));
+  if(allSelected) reportState.students.clear();
+  else c.students.forEach(s=>reportState.students.add(s.id));
+  openStudentSelectionModal();
+}
+
+// Homework selection modal
+function openHomeworkSelectionModal(mode){
+  const c = getClass(); if(!c) return;
+  const visible = c.homeworks.filter(h=>!h.hidden);
+  const allSelected = visible.every(h=>reportState.homeworks.has(h.id));
+  let html = `<h3>📋 Select Homework</h3>
+    <div style="margin:8px 0;">
+      <label style="font-weight:600;cursor:pointer;"><input type="checkbox" id="selectAllHw" ${allSelected?'checked':''} onchange="toggleAllHw()"> Select All</label>
+    </div>
+    <div style="max-height:250px;overflow-y:auto;border:1px solid var(--line);border-radius:8px;padding:4px;">`;
+  visible.forEach(h => {
+    const checked = reportState.homeworks.has(h.id) ? 'checked' : '';
+    html += `<div class="hw-check">
+      <input type="checkbox" id="hwchk_${h.id}" value="${h.id}" ${checked}>
+      <label for="hwchk_${h.id}">${esc(h.name)} ${h.date ? ' ('+esc(h.date)+')' : ''}</label>
+    </div>`;
+  });
+  html += `</div>
+    <div class="btn-row" style="margin-top:12px;">
+      <button class="btn-ghost" onclick="closeModal(); ${mode==='selected' ? 'openStudentSelectionModal();' : ''}">Cancel</button>
+      <button class="btn-main" onclick="applyHomeworkSelection('${mode}')">Apply</button>
+    </div>`;
+  showModal(html);
+}
+
+function toggleAllHw(){
+  const checked = document.getElementById('selectAllHw').checked;
+  document.querySelectorAll('#modalBody input[type=checkbox][id^="hwchk_"]').forEach(cb => cb.checked = checked);
+}
+
+function applyHomeworkSelection(mode){
+  const checked = document.querySelectorAll('#modalBody input[type=checkbox][id^="hwchk_"]:checked');
+  reportState.homeworks = new Set(Array.from(checked).map(cb => cb.value));
   closeModal();
-  generateWordReport(stuIds,selIds);
+  if(mode === 'all'){
+    // All students are already selected, generate directly
+    generateReportFromState();
+  } else {
+    // Return to student selection
+    openStudentSelectionModal();
+  }
+}
+
+function generateReportFromState(){
+  if(reportState.students.size === 0){ alert('Please select at least one student.'); return; }
+  if(reportState.homeworks.size === 0){ alert('Please select at least one homework column.'); return; }
+  const studentIds = Array.from(reportState.students);
+  const homeworkIds = Array.from(reportState.homeworks);
+  closeModal();
+  generateWordReport(studentIds, homeworkIds);
 }
 
 // ── WORD REPORT ───────────────────────────────────────────────────────────────
 const RED='C00000';
 function colorRun(text,color,bold){
-  const rpr=`<w:rPr>${bold?'<w:b/>':''}${color?`<w:color w:val="${color}"/>`:''}  <w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr>`;
+  const rpr=`<w:rPr>${bold?'<w:b/>':''}${color?`<w:color w:val="${color}"/>`:''}<w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr>`;
   return`<w:r>${rpr}<w:t xml:space="preserve">${escX(text)}</w:t></w:r>`;
-}
-function mixedPara(runs,spacing){
-  const sp=spacing||'<w:spacing w:before="0" w:after="100"/>';
-  return`<w:p><w:pPr>${sp}</w:pPr>${runs}</w:p>`;
 }
 function mixedCell(runs,colW,bold){
   const wXml=colW?`<w:tcW w:w="${colW}" w:type="dxa"/>`:'';
@@ -526,7 +628,7 @@ function statusRuns(st){
   return colorRun('Not submitted',null,false);
 }
 
-async function generateWordReport(stuIds,selectedHwIds){
+async function generateWordReport(stuIds, selectedHwIds){
   const c=getClass();if(!c){alert('No class selected.');return;}
   const hwList=c.homeworks.filter(h=>selectedHwIds.includes(h.id));
   if(!hwList.length){alert('No homework selected.');return;}
@@ -538,7 +640,7 @@ async function generateWordReport(stuIds,selectedHwIds){
     paragraphs.push(`<w:p><w:pPr><w:spacing w:before="0" w:after="120"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="32"/></w:rPr><w:t>Homework Status Report</w:t></w:r></w:p>`);
     paragraphs.push(`<w:p><w:pPr><w:spacing w:before="0" w:after="80"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Student: ${escX(s.name)}</w:t></w:r></w:p>`);
     paragraphs.push(`<w:p><w:pPr><w:spacing w:before="0" w:after="80"/></w:pPr><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">Class: ${escX(c.name)}</w:t></w:r></w:p>`);
-    // Date reported — "reported:" in red
+    // Date reported
     paragraphs.push(`<w:p><w:pPr><w:spacing w:before="0" w:after="160"/></w:pPr>
       <w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">Date </w:t></w:r>
       <w:r><w:rPr><w:sz w:val="20"/><w:color w:val="${RED}"/></w:rPr><w:t xml:space="preserve">reported: </w:t></w:r>
@@ -602,6 +704,16 @@ async function generateWordReport(stuIds,selectedHwIds){
   const fname=stuIds.length===1?(c.students.find(s=>s.id===stuIds[0])?.name||'student').replace(/[^a-z0-9]/gi,'_'):c.name.replace(/[^a-z0-9]/gi,'_')+'_all';
   a.download=`${fname}_homework_report.docx`;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
 }
+
+function dp(text,opts){
+  opts=opts||{};const rp=[];
+  if(opts.bold)rp.push('<w:b/>');
+  if(opts.size)rp.push(`<w:sz w:val="${opts.size}"/><w:szCs w:val="${opts.size}"/>`);
+  const rPr=rp.length?`<w:rPr>${rp.join('')}</w:rPr>`:'';
+  const pPr=(opts.bold||opts.size)?`<w:pPr><w:rPr>${rp.join('')}</w:rPr></w:pPr>`:'';
+  return`<w:p>${pPr}<w:r>${rPr}<w:t xml:space="preserve">${escX(text)}</w:t></w:r></w:p>`;
+}
+function pageBreak(){return`<w:p><w:r><w:br w:type="page"/></w:r></w:p>`;}
 
 // ── INIT ─────────────────────────────────────────────────────────────────────
 document.getElementById('addClassBtn').onclick=()=>{const i=document.getElementById('newClassName');addClass(i.value);i.value='';};
